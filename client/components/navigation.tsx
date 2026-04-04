@@ -43,9 +43,9 @@ export function Navigation() {
             ))}
           </div>
 
-          <ConnectButton chainStatus="icon" showBalance={false} />
-            {/* CTA Button */}
-          <div className="hidden md:block">
+          {/* Right side buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            <ConnectButton chainStatus="icon" showBalance={false} accountStatus="avatar" />
             <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Link href="/find-your-broker">
                 Choose your strategy
