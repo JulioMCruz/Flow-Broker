@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Wallet, ArrowRight, Shield, Zap } from "lucide-react"
+import dynamic from "next/dynamic"
+const WalletActivation = dynamic(() => import("@/components/broker/wallet-activation").then(m => m.WalletActivation), { ssr: false, loading: () => <div className="h-14 bg-gray-100 rounded animate-pulse" /> })
 import { useState } from "react"
 
 type BrokerType = 
@@ -265,16 +267,8 @@ export default function ActivatePage({ params }: { params: Promise<{ broker: str
               </div>
             )}
 
-            {/* Connect Wallet Button */}
-            <Button
-              onClick={() => setIsConnecting(true)}
-              disabled={!depositAmount || Number(depositAmount) <= 0}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg"
-            >
-              <Wallet className="w-5 h-5 mr-2" />
-              Connect Wallet & Deposit
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
+            {/* Real Wallet Payment */}
+            <WalletActivation brokerName={brokerParam} depositAmount={depositAmount} />
           </Card>
 
           {/* Dashboard Link */}
