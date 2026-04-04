@@ -42,13 +42,13 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
         borderRadius: 8,
         padding: "4px 8px",
         fontSize: 10,
-        width: 250,
+        width: 280,
       },
     }));
 
     const providerNodes: Node[] = Object.entries(PROVIDERS).map(([key, p], i) => ({
       id: `provider-${key}`,
-      position: { x: 750, y: 10 + i * 46 },
+      position: { x: 1100, y: 10 + i * 58 },
       data: {
         label: (
           <div className="text-left">
@@ -68,7 +68,7 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
         borderRadius: 8,
         padding: "4px 8px",
         fontSize: 10,
-        width: 320,
+        width: 360,
       },
     }));
 
@@ -108,11 +108,14 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
   }, [payments, isRunning]);
 
   return (
-    <div className="h-[75vh] min-h-[600px] border border-gray-200 rounded-lg overflow-hidden w-full">
+    <div className="border border-gray-200 rounded-lg overflow-hidden" style={{ height: "calc(100vh - 260px)", minHeight: "520px", width: "100%" }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
         fitView
+        fitViewOptions={{ padding: 0.05 }}
+        minZoom={0.3}
+        maxZoom={1.5}
         panOnDrag={false}
         zoomOnScroll={false}
         zoomOnPinch={false}
