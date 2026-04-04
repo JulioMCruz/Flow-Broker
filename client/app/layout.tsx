@@ -58,7 +58,7 @@ export default function RootLayout({
     <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className={`${outfit.variable} ${dmSerifDisplay.variable} ${dmMono.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
-        {process.env.NODE_ENV === 'production' && }
+        
       </body>
     </html>
   )
