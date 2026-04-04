@@ -183,14 +183,14 @@ app.post("/start", async (_req, res) => {
 
   // Broker definitions — each calls specific providers
   const brokers = [
-    { name: "momentum", providers: ["search", "sentiment"] },
-    { name: "news-reaction", providers: ["search", "sentiment", "summarize"] },
-    { name: "execution", providers: ["search"] },
-    { name: "risk-manager", providers: ["search", "sentiment", "llm"] },
-    { name: "mean-reversion", providers: ["search", "embeddings"] },
-    { name: "rebalancing", providers: ["search", "code"] },
-    { name: "yield-strategy", providers: ["search", "classify"] },
-    { name: "cross-market", providers: ["search", "sentiment", "classify"] },
+    { name: "Guardian", providers: ["search"] },
+    { name: "Sentinel", providers: ["search", "sentiment"] },
+    { name: "Steady", providers: ["search", "sentiment", "llm"] },
+    { name: "Navigator", providers: ["search", "sentiment", "llm", "code"] },
+    { name: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data"] },
+    { name: "Momentum", providers: ["search", "sentiment", "embeddings", "classify", "data", "translate"] },
+    { name: "Apex", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision"] },
+    { name: "Titan", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision", "translate", "summarize"] },
   ];
 
   const runWorker = async (idx: number, key: `0x${string}`) => {
