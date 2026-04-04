@@ -1,0 +1,11 @@
+{
+  "circleGatewayUrl": "https://facilitator.circle.com",
+  "backendSettlementUrl": "https://api.perkmesh.xyz/settle",
+  "evms": [
+    {
+      "paymentAccumulatorAddress": "0x627eE346183AB858c581A8F234ADA37579Ff1b13",
+      "chainSelectorName": "arc-testnet",
+      "gasLimit": "500000"
+    }
+  ]
+}

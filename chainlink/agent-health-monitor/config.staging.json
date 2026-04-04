@@ -1,0 +1,12 @@
+{
+  "agents": [
+    { "id": 0, "name": "httpbin-test", "endpoint": "https://httpbin.org" }
+  ],
+  "evms": [
+    {
+      "agentRegistryAddress": "0xE9bFA497e189272109540f9dBA4cb1419F05cdF0",
+      "chainSelectorName": "arc-testnet",
+      "gasLimit": "500000"
+    }
+  ]
+}

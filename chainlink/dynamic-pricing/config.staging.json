@@ -1,0 +1,22 @@
+{
+  "pricingApiUrl": "https://api.coingecko.com/api/v3/simple/price",
+  "agents": [
+    { "id": 0, "name": "llm",        "basePrice": 100,  "costMultiplier": 1.0 },
+    { "id": 1, "name": "search",     "basePrice": 1000, "costMultiplier": 0.8 },
+    { "id": 2, "name": "embeddings", "basePrice": 50,   "costMultiplier": 0.6 },
+    { "id": 3, "name": "translate",  "basePrice": 200,  "costMultiplier": 0.7 },
+    { "id": 4, "name": "summarize",  "basePrice": 150,  "costMultiplier": 0.9 },
+    { "id": 5, "name": "sentiment",  "basePrice": 100,  "costMultiplier": 0.5 },
+    { "id": 6, "name": "classify",   "basePrice": 100,  "costMultiplier": 0.5 },
+    { "id": 7, "name": "vision",     "basePrice": 500,  "costMultiplier": 1.2 },
+    { "id": 8, "name": "code",       "basePrice": 300,  "costMultiplier": 1.1 },
+    { "id": 9, "name": "data",       "basePrice": 200,  "costMultiplier": 0.7 }
+  ],
+  "evms": [
+    {
+      "pricingOracleAddress": "0xdF5e936A36A190859C799754AAC848D9f5Abf958",
+      "chainSelectorName": "arc-testnet",
+      "gasLimit": "500000"
+    }
+  ]
+}
