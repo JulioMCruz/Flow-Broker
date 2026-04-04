@@ -1,13 +1,12 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useConnect } from "wagmi";
 import { parseUnits } from "viem";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { USDC_ADDRESS, PLATFORM_ADDRESS, arcTestnet } from "@/lib/web3";
-import { ArrowRight, Loader2, CheckCircle } from "lucide-react";
+import { ArrowRight, Loader2, CheckCircle, Wallet } from "lucide-react";
 
 const USDC_ABI = [
   {
@@ -26,17 +25,16 @@ interface Props {
 
 export function WalletActivation({ brokerName, depositAmount }: Props) {
   const { isConnected, address } = useAccount();
+  const { connect, connectors } = useConnect();
   const router = useRouter();
-  const [step, setStep] = useState<"idle" | "paying" | "done">("idle");
+  const [done, setDone] = useState(false);
 
   const { writeContract, data: txHash, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
   const handleActivate = async () => {
     if (!depositAmount || Number(depositAmount) <= 0) return;
-    setStep("paying");
-
-    const amount = parseUnits(depositAmount, 6); // USDC 6 decimals
+    const amount = parseUnits(depositAmount, 6);
     writeContract({
       address: USDC_ADDRESS,
       abi: USDC_ABI,
@@ -46,12 +44,16 @@ export function WalletActivation({ brokerName, depositAmount }: Props) {
     });
   };
 
-  if (isSuccess || step === "done") {
-    setTimeout(() => router.push("/dashboard"), 2000);
+  if (isSuccess && !done) {
+    setDone(true);
+    setTimeout(() => router.push("https://flowbroker-app.netlify.app"), 2000);
+  }
+
+  if (done || isSuccess) {
     return (
       <div className="w-full h-14 flex items-center justify-center gap-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
         <CheckCircle className="w-5 h-5" />
-        <span className="font-medium">Activated! Launching dashboard...</span>
+        <span className="font-medium">Activated! Opening dashboard...</span>
       </div>
     );
   }
@@ -59,10 +61,15 @@ export function WalletActivation({ brokerName, depositAmount }: Props) {
   if (!isConnected) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-muted-foreground text-center">Connect your wallet on Arc Testnet to activate</p>
-        <div className="flex justify-center">
-          <ConnectButton chainStatus="icon" showBalance={false} />
-        </div>
+        <p className="text-sm text-muted-foreground text-center">Connect MetaMask on Arc Testnet to activate</p>
+        <Button
+          onClick={() => connect({ connector: connectors[0] })}
+          className="w-full h-14 text-lg"
+          variant="outline"
+        >
+          <Wallet className="w-5 h-5 mr-2" />
+          Connect Wallet
+        </Button>
       </div>
     );
   }
@@ -71,7 +78,7 @@ export function WalletActivation({ brokerName, depositAmount }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>Connected: {address?.slice(0, 8)}...{address?.slice(-4)}</span>
-        <ConnectButton chainStatus="icon" showBalance={false} accountStatus="avatar" />
+        <span className="text-green-600">● Arc Testnet</span>
       </div>
       <Button
         onClick={handleActivate}
@@ -79,13 +86,13 @@ export function WalletActivation({ brokerName, depositAmount }: Props) {
         className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-14 text-lg"
       >
         {isPending || isConfirming ? (
-          <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isConfirming ? "Confirming..." : "Confirm in wallet..."}</>
+          <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isConfirming ? "Confirming on Arc..." : "Confirm in MetaMask..."}</>
         ) : (
-          <><span>Pay ${depositAmount} USDC & Activate {brokerName}</span><ArrowRight className="w-5 h-5 ml-2" /></>
+          <>Pay ${depositAmount} USDC · Activate {brokerName}<ArrowRight className="w-5 h-5 ml-2" /></>
         )}
       </Button>
       {txHash && (
-        <p className="text-xs text-muted-foreground text-center font-mono">
+        <p className="text-xs text-center font-mono">
           tx: <a href={`https://testnet.arcscan.app/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{txHash.slice(0, 20)}...</a>
         </p>
       )}

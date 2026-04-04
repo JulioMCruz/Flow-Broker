@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import dynamic from "next/dynamic"
-const ConnectButton = dynamic(() => import("@rainbow-me/rainbowkit").then(m => m.ConnectButton), { ssr: false })
+
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -45,7 +44,7 @@ export function Navigation() {
 
           {/* Right side buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <ConnectButton chainStatus="icon" showBalance={false} accountStatus="avatar" />
+            <ConnectWalletButton />
             <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Link href="/find-your-broker">
                 Choose your strategy
