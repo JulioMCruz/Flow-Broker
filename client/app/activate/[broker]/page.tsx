@@ -277,6 +277,19 @@ export default function ActivatePage({ params }: { params: Promise<{ broker: str
             </Button>
           </Card>
 
+          {/* Dashboard Link */}
+          <div className="text-center">
+            <a
+              href="https://flowbroker-app.netlify.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+            >
+              View Live Dashboard →
+            </a>
+            <p className="text-xs text-muted-foreground mt-2">Opens the broker activity dashboard</p>
+          </div>
+
           {/* Security Info */}
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="bg-card border-border p-6">
