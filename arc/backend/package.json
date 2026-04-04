@@ -6,19 +6,23 @@
   "scripts": {
     "seller": "tsx --env-file=.env src/seller.ts",
     "buyer": "tsx --env-file=.env src/buyer.ts",
-    "orchestrator": "tsx --env-file=.env src/orchestrator.ts"
+    "orchestrator": "tsx --env-file=.env src/orchestrator.ts",
+    "jobs": "tsx --env-file=.env src/job-manager.ts",
+    "server": "tsx --env-file=.env src/server.ts"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "latest",
     "@x402/core": "latest",
     "@x402/evm": "latest",
     "@x402/express": "latest",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
     "viem": "^2.0.0",
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.18.1",
