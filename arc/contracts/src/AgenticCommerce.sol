@@ -12,9 +12,6 @@ import {IACPHook} from "./interfaces/IACPHook.sol";
 contract AgenticCommerce is Ownable {
     using SafeERC20 for IERC20;
 
-    // ================================================================
-    // │ Errors                                                        │
-    // ================================================================
     error JobNotFound();
     error InvalidState(JobStatus current, JobStatus expected);
     error NotClient();
@@ -31,9 +28,6 @@ contract AgenticCommerce is Ownable {
     error ZeroAddress();
     error ZeroBudget();
 
-    // ================================================================
-    // │ Events                                                        │
-    // ================================================================
     event JobCreated(uint256 indexed jobId, address indexed client, address provider, address evaluator, string description);
     event ProviderSet(uint256 indexed jobId, address indexed provider);
     event BudgetSet(uint256 indexed jobId, uint256 amount, address setter);
@@ -43,9 +37,6 @@ contract AgenticCommerce is Ownable {
     event JobRejected(uint256 indexed jobId, bytes32 reason, address rejector);
     event JobExpired(uint256 indexed jobId);
 
-    // ================================================================
-    // │ Types                                                         │
-    // ================================================================
 
     enum JobStatus {
         Open,       // 0 - Created, not yet funded
@@ -68,9 +59,6 @@ contract AgenticCommerce is Ownable {
         bytes32 deliverable;    // set on submit
     }
 
-    // ================================================================
-    // │ Storage                                                       │
-    // ================================================================
 
     /// @notice Payment token (USDC on Arc)
     IERC20 public immutable paymentToken;
@@ -83,9 +71,6 @@ contract AgenticCommerce is Ownable {
     uint256 public feeBps;
     address public treasury;
 
-    // ================================================================
-    // │ Function Selectors (for hooks)                                │
-    // ================================================================
     bytes4 public constant SET_PROVIDER_SELECTOR = bytes4(keccak256("setProvider(uint256,address,bytes)"));
     bytes4 public constant SET_BUDGET_SELECTOR = bytes4(keccak256("setBudget(uint256,uint256,bytes)"));
     bytes4 public constant FUND_SELECTOR = bytes4(keccak256("fund(uint256,uint256,bytes)"));
@@ -93,9 +78,6 @@ contract AgenticCommerce is Ownable {
     bytes4 public constant COMPLETE_SELECTOR = bytes4(keccak256("complete(uint256,bytes32,bytes)"));
     bytes4 public constant REJECT_SELECTOR = bytes4(keccak256("reject(uint256,bytes32,bytes)"));
 
-    // ================================================================
-    // │ Constructor                                                    │
-    // ================================================================
 
     /// @param _paymentToken USDC address on Arc Testnet
     /// @param _feeBps Platform fee in basis points (0 = no fee)
@@ -106,9 +88,6 @@ contract AgenticCommerce is Ownable {
         treasury = _treasury;
     }
 
-    // ================================================================
-    // │ Core Functions (ERC-8183)                                     │
-    // ================================================================
 
     /// @notice Create a new job
     /// @param provider Provider address (can be address(0) for bidding flow)
@@ -284,17 +263,11 @@ contract AgenticCommerce is Ownable {
         emit JobExpired(jobId);
     }
 
-    // ================================================================
-    // │ Read Functions                                                │
-    // ================================================================
 
     function getJob(uint256 jobId) external view returns (Job memory) {
         return jobs[jobId];
     }
 
-    // ================================================================
-    // │ Hook Helpers                                                   │
-    // ================================================================
 
     function _beforeHook(uint256 jobId, address hook, bytes4 selector, bytes memory data) internal {
         if (hook != address(0)) {
@@ -308,9 +281,6 @@ contract AgenticCommerce is Ownable {
         }
     }
 
-    // ================================================================
-    // │ Admin                                                         │
-    // ================================================================
 
     function setFee(uint256 _feeBps, address _treasury) external onlyOwner {
         feeBps = _feeBps;

@@ -23,9 +23,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", agent: "perkmesh-seller", chain: "arc-testnet", services: 10 });
 });
 
-// ============================================================
 // 10 Agent Services (prices match ENS text records)
-// ============================================================
 
 // 1. Search — $0.001
 app.get("/api/search", gateway.require("$0.001"), (req: any, res) => {

@@ -7,26 +7,17 @@ import {ReceiverTemplate} from "./interfaces/ReceiverTemplate.sol";
 /// @notice Central registry for PerkMesh agent fleet — stores metadata, status, pricing, reputation.
 /// @dev Extends ReceiverTemplate so CRE workflows can update agent state via KeystoneForwarder.
 contract AgentRegistry is ReceiverTemplate {
-    // ================================================================
-    // │ Errors                                                        │
-    // ================================================================
     error AgentNotFound(uint256 agentId);
     error AgentAlreadyExists(address wallet);
     error InvalidAgent();
     error NotAuthorized();
 
-    // ================================================================
-    // │ Events                                                        │
-    // ================================================================
     event AgentRegistered(uint256 indexed agentId, string name, address indexed wallet);
     event AgentStatusUpdated(uint256 indexed agentId, uint8 oldStatus, uint8 newStatus);
     event AgentPriceUpdated(uint256 indexed agentId, uint256 oldPrice, uint256 newPrice);
     event AgentReputationUpdated(uint256 indexed agentId, uint256 completed, uint256 rejected);
     event AgentEndpointUpdated(uint256 indexed agentId, string newEndpoint);
 
-    // ================================================================
-    // │ Types                                                         │
-    // ================================================================
 
     /// @notice Payment model for agent services
     enum PaymentModel {
@@ -67,16 +58,10 @@ contract AgentRegistry is ReceiverTemplate {
         string capabilities;
     }
 
-    // ================================================================
-    // │ CRE Report Types                                              │
-    // ================================================================
     uint8 public constant REPORT_STATUS_UPDATE = 1;
     uint8 public constant REPORT_PRICE_UPDATE = 2;
     uint8 public constant REPORT_REPUTATION_UPDATE = 3;
 
-    // ================================================================
-    // │ Storage                                                       │
-    // ================================================================
     mapping(uint256 => Agent) public agents;
     mapping(address => uint256) public agentByWallet;
     uint256 public agentCount;
@@ -84,18 +69,12 @@ contract AgentRegistry is ReceiverTemplate {
     /// @notice Addresses allowed to update agent state (backend, hooks)
     mapping(address => bool) public operators;
 
-    // ================================================================
-    // │ Constructor                                                    │
-    // ================================================================
 
     /// @param _forwarderAddress Chainlink KeystoneForwarder on Arc Testnet
     constructor(address _forwarderAddress) ReceiverTemplate(_forwarderAddress) {
         operators[msg.sender] = true;
     }
 
-    // ================================================================
-    // │ Modifiers                                                     │
-    // ================================================================
 
     modifier onlyOperatorOrOwner() {
         if (msg.sender != owner() && !operators[msg.sender]) revert NotAuthorized();
@@ -107,9 +86,6 @@ contract AgentRegistry is ReceiverTemplate {
         _;
     }
 
-    // ================================================================
-    // │ Admin Functions                                                │
-    // ================================================================
 
     /// @notice Register a single agent
     function registerAgent(AgentParams calldata params) external onlyOwner returns (uint256 agentId) {
@@ -170,9 +146,6 @@ contract AgentRegistry is ReceiverTemplate {
         operators[operator] = allowed;
     }
 
-    // ================================================================
-    // │ State Updates (by operators, owner, or CRE)                   │
-    // ================================================================
 
     /// @notice Update agent status (active/inactive)
     function updateStatus(uint256 agentId, Status newStatus) external onlyOperatorOrOwner agentExists(agentId) {
@@ -207,9 +180,6 @@ contract AgentRegistry is ReceiverTemplate {
         emit AgentReputationUpdated(agentId, agents[agentId].totalJobsCompleted, agents[agentId].totalJobsRejected);
     }
 
-    // ================================================================
-    // │ Read Functions                                                │
-    // ================================================================
 
     /// @notice Get full agent data
     function getAgent(uint256 agentId) external view returns (Agent memory) {
@@ -239,9 +209,6 @@ contract AgentRegistry is ReceiverTemplate {
         total = completed + rejected;
     }
 
-    // ================================================================
-    // │ CRE Integration (ReceiverTemplate)                            │
-    // ================================================================
 
     /// @notice Process reports from CRE workflows via KeystoneForwarder
     /// @dev Report format: abi.encode(uint8 reportType, bytes data)

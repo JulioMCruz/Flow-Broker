@@ -8,19 +8,10 @@ import {AgentRegistry} from "./AgentRegistry.sol";
 /// @notice ERC-8183 hook that updates agent reputation in AgentRegistry after job completion or rejection.
 /// @dev Attached to jobs at creation. Called by AgenticCommerce before/after core functions.
 contract ReputationHook is IACPHook {
-    // ================================================================
-    // │ Errors                                                        │
-    // ================================================================
     error OnlyACP();
 
-    // ================================================================
-    // │ Events                                                        │
-    // ================================================================
     event ReputationIncremented(uint256 indexed jobId, uint256 indexed agentId, bool completed);
 
-    // ================================================================
-    // │ Storage                                                       │
-    // ================================================================
 
     /// @notice The AgentRegistry contract
     AgentRegistry public immutable registry;
@@ -28,15 +19,9 @@ contract ReputationHook is IACPHook {
     /// @notice The AgenticCommerce contract (only this can call hook functions)
     address public immutable agenticCommerce;
 
-    // ================================================================
-    // │ Function Selectors (must match AgenticCommerce)                │
-    // ================================================================
     bytes4 public constant COMPLETE_SELECTOR = bytes4(keccak256("complete(uint256,bytes32,bytes)"));
     bytes4 public constant REJECT_SELECTOR = bytes4(keccak256("reject(uint256,bytes32,bytes)"));
 
-    // ================================================================
-    // │ Constructor                                                    │
-    // ================================================================
 
     /// @param _registry AgentRegistry contract address
     /// @param _agenticCommerce AgenticCommerce contract address
@@ -45,18 +30,12 @@ contract ReputationHook is IACPHook {
         agenticCommerce = _agenticCommerce;
     }
 
-    // ================================================================
-    // │ Modifiers                                                     │
-    // ================================================================
 
     modifier onlyACP() {
         if (msg.sender != agenticCommerce) revert OnlyACP();
         _;
     }
 
-    // ================================================================
-    // │ IACPHook Implementation                                       │
-    // ================================================================
 
     /// @notice Before action — no pre-checks needed for reputation tracking
     function beforeAction(uint256, bytes4, bytes calldata) external view onlyACP {
@@ -75,9 +54,6 @@ contract ReputationHook is IACPHook {
         // Other selectors (fund, submit, etc.) — no reputation action needed
     }
 
-    // ================================================================
-    // │ Internal                                                      │
-    // ================================================================
 
     /// @notice Handle job completion — reward provider reputation
     function _onJobCompleted(uint256 jobId, bytes calldata) internal {
