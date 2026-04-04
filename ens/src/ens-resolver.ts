@@ -1,6 +1,3 @@
-// PerkMesh — ENS Service Discovery
-// Resolves agent endpoints, prices, and capabilities from ENS text records on Sepolia
-
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 import { normalize } from "viem/ens";
@@ -11,6 +8,8 @@ const ensClient = createPublicClient({
   transport: http("https://ethereum-sepolia-rpc.publicnode.com"),
 });
 
+const ENS_DOMAIN = "flowbroker.eth";
+
 export interface ENSAgentRecord {
   name: string;
   ensName: string;
@@ -19,80 +18,83 @@ export interface ENSAgentRecord {
   priceUsd: number;
   capabilities: string;
   status: string;
+  agentType: string;
+  providers: string;
 }
 
-const AGENT_NAMES = [
-  "search", "llm", "sentiment", "classify", "data",
-  "embeddings", "translate", "summarize", "vision", "code",
+const PROVIDER_NAMES = [
+  "market-data", "ai-analysis", "sentiment", "classifier", "portfolio-data",
+  "embeddings", "translator", "summarizer", "chart-analyzer", "compute",
 ];
 
-/**
- * Resolve a single agent's text records from ENS
- */
-export async function resolveAgent(agentName: string): Promise<ENSAgentRecord | null> {
-  const ensName = `${agentName}.perkmesh.eth`;
+const BROKER_NAMES = [
+  "momentum", "news-reaction", "execution", "risk-manager",
+  "mean-reversion", "rebalancing", "yield-strategy", "cross-market",
+];
 
+// Map provider ENS names to backend endpoints
+const PROVIDER_TO_ENDPOINT: Record<string, string> = {
+  "market-data": "search", "ai-analysis": "llm", "sentiment": "sentiment",
+  "classifier": "classify", "portfolio-data": "data", "embeddings": "embeddings",
+  "translator": "translate", "summarizer": "summarize", "chart-analyzer": "vision",
+  "compute": "code",
+};
+
+async function resolveAgent(name: string): Promise<ENSAgentRecord | null> {
+  const ensName = `${name}.${ENS_DOMAIN}`;
   try {
-    const [endpoint, price, capabilities, status] = await Promise.all([
-      ensClient.getEnsText({ name: normalize(ensName), key: "com.x402.endpoint" }),
+    const [price, capabilities, status, agentType, providers] = await Promise.all([
       ensClient.getEnsText({ name: normalize(ensName), key: "com.x402.price" }),
       ensClient.getEnsText({ name: normalize(ensName), key: "com.agent.capabilities" }),
       ensClient.getEnsText({ name: normalize(ensName), key: "com.agent.status" }),
+      ensClient.getEnsText({ name: normalize(ensName), key: "com.agent.type" }),
+      ensClient.getEnsText({ name: normalize(ensName), key: "com.agent.providers" }),
     ]);
 
-    if (!endpoint || !price || status !== "active") {
-      console.log(`  ⚠️ ${ensName}: inactive or missing records`);
-      return null;
-    }
-
     return {
-      name: agentName,
-      ensName,
-      endpoint,
-      price: `$${price}`,
-      priceUsd: parseFloat(price),
+      name, ensName,
+      endpoint: PROVIDER_TO_ENDPOINT[name] || name,
+      price: price ? `$${price}` : "$0.000001",
+      priceUsd: price ? parseFloat(price) : 0.000001,
       capabilities: capabilities || "",
-      status: status || "unknown",
+      status: status || "active",
+      agentType: agentType || "unknown",
+      providers: providers || "",
     };
-  } catch (err: any) {
-    console.error(`  ❌ Failed to resolve ${ensName}: ${err.message}`);
+  } catch {
     return null;
   }
 }
 
-/**
- * Discover all active agents from ENS
- */
-export async function discoverAgents(): Promise<ENSAgentRecord[]> {
-  console.log("🔍 Discovering agents via ENS (perkmesh.eth)...\n");
-
-  const results = await Promise.all(
-    AGENT_NAMES.map((name) => resolveAgent(name))
-  );
-
+export async function discoverProviders(): Promise<ENSAgentRecord[]> {
+  console.log(`Discovering providers via ENS (${ENS_DOMAIN})...`);
+  const results = await Promise.all(PROVIDER_NAMES.map(resolveAgent));
   const active = results.filter((r): r is ENSAgentRecord => r !== null);
-
-  console.log(`\n✅ Discovered ${active.length}/${AGENT_NAMES.length} active agents:`);
-  for (const agent of active) {
-    console.log(`   ${agent.ensName} → ${agent.price} | ${agent.capabilities}`);
-  }
-  console.log("");
-
+  console.log(`  ${active.length}/${PROVIDER_NAMES.length} providers found`);
+  for (const a of active) console.log(`   ${a.ensName} → ${a.price} | ${a.capabilities}`);
   return active;
 }
 
-/**
- * Convert ENS records to ServiceConfig format (for orchestrator compatibility)
- */
+export async function discoverBrokers(): Promise<ENSAgentRecord[]> {
+  console.log(`Discovering brokers via ENS (${ENS_DOMAIN})...`);
+  const results = await Promise.all(BROKER_NAMES.map(resolveAgent));
+  const active = results.filter((r): r is ENSAgentRecord => r !== null);
+  console.log(`  ${active.length}/${BROKER_NAMES.length} brokers found`);
+  for (const a of active) console.log(`   ${a.ensName} → providers: ${a.providers}`);
+  return active;
+}
+
+// Keep old function for compatibility
+export async function discoverAgents() { return discoverProviders(); }
+
 export function toServiceConfigs(agents: ENSAgentRecord[], localBaseUrl: string): ServiceConfig[] {
   return agents.map((agent) => ({
-    name: agent.name,
+    name: agent.endpoint,
     ensName: agent.ensName,
-    endpoint: `/api/${agent.name}`, // local endpoint (ENS stores the public URL)
+    endpoint: `/api/${agent.endpoint}`,
     price: agent.price,
     priceUsd: agent.priceUsd,
-    method: ["llm", "translate", "summarize", "vision", "code"].includes(agent.name)
-      ? "POST" as const
-      : "GET" as const,
+    method: ["llm", "translate", "summarize", "vision", "code"].includes(agent.endpoint)
+      ? "POST" as const : "GET" as const,
   }));
 }

@@ -13,7 +13,7 @@ export interface ServiceConfig {
 export const SERVICES: ServiceConfig[] = [
   {
     name: "search",
-    ensName: "search.perkmesh.eth",
+    ensName: "search.flowbroker.eth",
     endpoint: "/api/search",
     price: "$0.001",
     priceUsd: 0.001,
@@ -21,7 +21,7 @@ export const SERVICES: ServiceConfig[] = [
   },
   {
     name: "llm",
-    ensName: "llm.perkmesh.eth",
+    ensName: "llm.flowbroker.eth",
     endpoint: "/api/llm",
     price: "$0.015",
     priceUsd: 0.015,
