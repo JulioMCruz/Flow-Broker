@@ -14,7 +14,7 @@ const PROFILES = [
 ];
 
 export function Dashboard() {
-  const { connected, stats, payments, isComplete, connect, disconnect } = useWebSocket();
+  const { connected, stats, payments, isComplete, connect, disconnect, reset } = useWebSocket();
   const isRunning = connected && !isComplete;
   const [txCount, setTxCount] = useState("200");
   const [profile, setProfile] = useState("balanced");
@@ -24,7 +24,11 @@ export function Dashboard() {
   const [gwStatus, setGwStatus] = useState<any>(null);
 
   const handleStart = async () => {
-    if (connected) { disconnect(); return; }
+    if (connected) {
+      disconnect();
+      if (isComplete) reset();
+      return;
+    }
     connect();
     try {
       await fetch(api("/start"), {
@@ -54,18 +58,8 @@ export function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           {!connected && (
-            <>
-              {PROFILES.map(p => (
-                <button key={p.id} onClick={() => setProfile(p.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    profile === p.id ? p.color + " border-current" : "text-gray-400 border-gray-200 hover:border-gray-300"
-                  }`}>
-                  {p.label}
-                </button>
-              ))}
-              <input value={txCount} onChange={e => setTxCount(e.target.value)}
-                className="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-center font-mono focus:outline-none focus:ring-2 focus:ring-gray-200" />
-            </>
+            <input value={txCount} onChange={e => setTxCount(e.target.value)}
+              className="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-center font-mono focus:outline-none focus:ring-2 focus:ring-gray-200" />
           )}
           <button onClick={handleStart}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${

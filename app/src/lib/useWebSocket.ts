@@ -72,7 +72,19 @@ export function useWebSocket() {
     ws.onopen = () => {
       setConnected(true);
       setIsComplete(false);
-      console.log("🔌 Connected to Flow Broker orchestrator");
+      setPayments([]);
+      setStats({
+        totalPayments: 0,
+        totalVolume: "0",
+        paymentsPerMin: 0,
+        dollarsPerSec: "0",
+        activeWorkers: 0,
+        gasSaved: "0",
+        platformFees: "0",
+        elapsed: 0,
+      });
+      setWorkers(new Map());
+      console.log("[ws] connected to orchestrator");
     };
 
     ws.onclose = () => {
@@ -85,7 +97,7 @@ export function useWebSocket() {
 
       switch (msg.type) {
         case "payment":
-          setPayments((prev) => [msg.data, ...prev].slice(0, 100));
+          setPayments((prev) => [msg.data, ...prev].slice(0, 500));
           console.log(`%c[x402] %c${msg.data.worker?.slice(0,8)}→${msg.data.service} %c${msg.data.amount} %c✓ verified`, "color: #f59e0b", "color: #d1d5db", "color: #22c55e", "color: #22c55e; font-weight: bold");
           break;
         case "stats":
@@ -135,6 +147,22 @@ export function useWebSocket() {
     wsRef.current = null;
   }, []);
 
+  const reset = useCallback(() => {
+    setPayments([]);
+    setStats({
+      totalPayments: 0,
+      totalVolume: "0",
+      paymentsPerMin: 0,
+      dollarsPerSec: "0",
+      activeWorkers: 0,
+      gasSaved: "0",
+      platformFees: "0",
+      elapsed: 0,
+    });
+    setWorkers(new Map());
+    setIsComplete(false);
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -150,5 +178,6 @@ export function useWebSocket() {
     isComplete,
     connect,
     disconnect,
+    reset,
   };
 }
