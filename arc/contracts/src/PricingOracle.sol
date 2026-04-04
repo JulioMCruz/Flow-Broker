@@ -7,15 +7,9 @@ import {ReceiverTemplate} from "./interfaces/ReceiverTemplate.sol";
 /// @notice Receives price updates from CRE Dynamic Pricing workflow. Agents read current prices from here.
 /// @dev Extends ReceiverTemplate so CRE can write via KeystoneForwarder → onReport() → _processReport()
 contract PricingOracle is ReceiverTemplate {
-    // ================================================================
-    // │ Events                                                        │
-    // ================================================================
     event PriceUpdated(uint256 indexed agentId, uint256 oldPrice, uint256 newPrice, uint256 timestamp);
     event BatchPriceUpdate(uint256 agentCount, uint256 timestamp);
 
-    // ================================================================
-    // │ Storage                                                       │
-    // ================================================================
 
     /// @notice Current price per agent (USDC atomic units, 6 decimals)
     mapping(uint256 => uint256) public agentPrices;
@@ -26,16 +20,10 @@ contract PricingOracle is ReceiverTemplate {
     /// @notice Total price updates received
     uint256 public totalUpdates;
 
-    // ================================================================
-    // │ Constructor                                                    │
-    // ================================================================
 
     /// @param _forwarderAddress Chainlink KeystoneForwarder on Arc Testnet
     constructor(address _forwarderAddress) ReceiverTemplate(_forwarderAddress) {}
 
-    // ================================================================
-    // │ Admin Functions                                                │
-    // ================================================================
 
     /// @notice Set initial prices for agents (batch, by owner)
     function setInitialPrices(uint256[] calldata agentIds, uint256[] calldata prices) external onlyOwner {
@@ -48,9 +36,6 @@ contract PricingOracle is ReceiverTemplate {
         }
     }
 
-    // ================================================================
-    // │ Read Functions                                                │
-    // ================================================================
 
     /// @notice Get current price for an agent
     function getPrice(uint256 agentId) external view returns (uint256 price, uint256 updatedAt) {
@@ -65,9 +50,6 @@ contract PricingOracle is ReceiverTemplate {
         }
     }
 
-    // ================================================================
-    // │ CRE Integration (ReceiverTemplate)                            │
-    // ================================================================
 
     /// @notice Process price update reports from CRE Dynamic Pricing workflow
     /// @dev Report format: abi.encode(uint256[] agentIds, uint256[] prices)

@@ -8,15 +8,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @dev Called by the backend after each x402 payment is verified. Not involved in actual settlement
 ///      (Circle Gateway handles that). This contract is purely for tracking and triggering CRE workflows.
 contract PaymentAccumulator is Ownable {
-    // ================================================================
-    // │ Errors                                                        │
-    // ================================================================
     error NotAuthorized();
     error InvalidAmount();
 
-    // ================================================================
-    // │ Events                                                        │
-    // ================================================================
 
     /// @notice Emitted for each recorded payment (dashboard uses this)
     event PaymentRecorded(
@@ -42,9 +36,6 @@ contract PaymentAccumulator is Ownable {
         uint256 gasSaved
     );
 
-    // ================================================================
-    // │ Storage                                                       │
-    // ================================================================
 
     /// @notice Current batch counters (reset on threshold)
     uint256 public currentBatchPaymentCount;
@@ -67,9 +58,6 @@ contract PaymentAccumulator is Ownable {
     /// @notice Authorized recorders (backend services)
     mapping(address => bool) public recorders;
 
-    // ================================================================
-    // │ Constructor                                                    │
-    // ================================================================
 
     /// @param _threshold Number of payments before emitting threshold event
     /// @param _estimatedGasPerTx Estimated gas cost per individual settlement tx (for display)
@@ -82,18 +70,12 @@ contract PaymentAccumulator is Ownable {
         recorders[msg.sender] = true;
     }
 
-    // ================================================================
-    // │ Modifiers                                                     │
-    // ================================================================
 
     modifier onlyRecorder() {
         if (!recorders[msg.sender] && msg.sender != owner()) revert NotAuthorized();
         _;
     }
 
-    // ================================================================
-    // │ Admin                                                         │
-    // ================================================================
 
     /// @notice Set authorized recorder address
     function setRecorder(address recorder, bool allowed) external onlyOwner {
@@ -110,9 +92,6 @@ contract PaymentAccumulator is Ownable {
         estimatedGasPerTx = newEstimate;
     }
 
-    // ================================================================
-    // │ Record Payments                                               │
-    // ================================================================
 
     /// @notice Record a single nanopayment (called by backend after x402 verification)
     /// @param from Buyer agent address
@@ -167,9 +146,6 @@ contract PaymentAccumulator is Ownable {
         }
     }
 
-    // ================================================================
-    // │ Settlement Recording                                          │
-    // ================================================================
 
     /// @notice Record that Circle Gateway settled a batch (called by backend or CRE)
     /// @param txHash The on-chain transaction hash of the batch settlement
@@ -192,9 +168,6 @@ contract PaymentAccumulator is Ownable {
         currentBatchTotalAmount = 0;
     }
 
-    // ================================================================
-    // │ Read Functions                                                │
-    // ================================================================
 
     /// @notice Get current batch stats
     function getCurrentBatchStats()
