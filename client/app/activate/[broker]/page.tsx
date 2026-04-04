@@ -267,6 +267,28 @@ export default function ActivatePage({ params }: { params: Promise<{ broker: str
               </div>
             )}
 
+            {/* Add Arc Testnet to MetaMask */}
+            <div className="text-center mb-2">
+              <button
+                onClick={async () => {
+                  if (typeof window !== "undefined" && window.ethereum) {
+                    await window.ethereum.request({
+                      method: "wallet_addEthereumChain",
+                      params: [{
+                        chainId: "0x4CEF52",
+                        chainName: "Arc Testnet",
+                        nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+                        rpcUrls: ["https://rpc.testnet.arc.network"],
+                        blockExplorerUrls: ["https://testnet.arcscan.app"],
+                      }],
+                    });
+                  }
+                }}
+                className="text-xs text-muted-foreground underline hover:text-primary"
+              >
+                + Add Arc Testnet to MetaMask
+              </button>
+            </div>
             {/* Real Wallet Payment */}
             <WalletActivation brokerName={brokerParam} depositAmount={depositAmount} />
           </Card>
