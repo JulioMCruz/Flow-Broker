@@ -1,5 +1,4 @@
-import { createConfig, http } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { defineChain } from "viem";
 
 export const arcTestnet = defineChain({
@@ -13,10 +12,11 @@ export const arcTestnet = defineChain({
   testnet: true,
 });
 
-export const wagmiConfig = createConfig({
+export const wagmiConfig = getDefaultConfig({
+  appName: "Flow Broker",
+  projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID || "a439946a4066ac956330bf09c0080f0c",
   chains: [arcTestnet],
-  connectors: [injected()],
-  transports: { [arcTestnet.id]: http() },
+  ssr: false,
 });
 
 export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000" as `0x${string}`;
