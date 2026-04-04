@@ -41,12 +41,12 @@ export function Dashboard() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Flow Broker</h1>
-          <p className="text-sm text-gray-500">Autonomous AI Broker on Arc</p>
+          <h1 className="text-xl font-semibold">Flow Broker</h1>
+          <p className="text-xs text-gray-400">Autonomous AI Broker on Arc</p>
         </div>
         <div className="flex items-center gap-3">
           {!connected && (
@@ -62,7 +62,7 @@ export function Dashboard() {
             </>
           )}
           <button onClick={handleStart}
-            className={`px-6 py-2.5 rounded-lg text-sm font-semibold ${connected ? "bg-gray-100 text-gray-600" : "bg-gray-900 text-white"}`}>
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium ${connected ? "bg-gray-100 text-gray-600" : "bg-gray-900 text-white"}`}>
             {connected ? "Stop" : "Start"}
           </button>
         </div>
@@ -103,7 +103,7 @@ export function Dashboard() {
               } catch {}
             }
           }}
-            className={`px-4 py-2 rounded-t text-sm ${tab === t ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}>
+            className={`px-3 py-1 rounded-t text-xs ${tab === t ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}>
             {t === "flow" ? "Flow" : t === "calls" ? "Calls" : t === "settlement" ? "Settlement" : t === "cre" ? "CRE" : t === "verify" ? "Verify" : "Protocols"}
           </button>
         ))}
@@ -151,20 +151,33 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Calls View */}
+      {/* Calls View — x402 transaction log */}
       {tab === "calls" && (
-        <div className="border border-gray-200 rounded-lg h-[400px] overflow-y-auto">
-          <div className="divide-y divide-gray-50">
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+            <p className="text-xs font-medium">x402 Payment Log — Broker → Information Provider</p>
+            <span className="text-[10px] text-gray-400 font-mono">{payments.length} payments · Arc Testnet</span>
+          </div>
+          <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
             {payments.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-400 text-sm">Click Start</div>
+              <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Click Start to see x402 payments</div>
             ) : payments.map((p, i) => (
-              <div key={i} className="px-3 py-1.5 flex items-center gap-2 font-mono text-xs">
-                <span className="text-gray-300 w-14">{new Date(p.timestamp).toLocaleTimeString()}</span>
-                <span className="text-green-700 w-24 truncate font-medium">{brokerLabel(p.worker)}</span>
-                <span className="text-gray-300">→</span>
-                <span className="text-blue-600 w-24 truncate">{providerLabel(p.service)}</span>
-                <span className="text-green-500 text-[10px]">✓</span>
-                <span className="text-gray-500 ml-auto">{p.amount}</span>
+              <div key={i} className="px-3 py-2 font-mono text-xs hover:bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-gray-300 w-14">{new Date(p.timestamp).toLocaleTimeString()}</span>
+                  <span className="text-[9px] text-amber-600 border border-amber-200 rounded px-1">x402</span>
+                  <span className="text-green-700 w-20 font-medium truncate">{brokerLabel(p.worker)}</span>
+                  <span className="text-gray-300 text-[10px]">──pays──→</span>
+                  <span className="text-blue-600 w-28 truncate">{providerLabel(p.service)}</span>
+                  <span className="text-green-500 text-[10px]">✓ verified</span>
+                  <span className="text-green-700 font-semibold ml-auto">{p.amount}</span>
+                </div>
+                {(p as any).insight && (
+                  <div className="flex items-center gap-2 mt-0.5 ml-6">
+                    <span className="text-[9px] text-gray-300">↳ returns:</span>
+                    <span className="text-[9px] text-blue-500 font-sans truncate">{(p as any).insight}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

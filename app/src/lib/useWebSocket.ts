@@ -9,6 +9,7 @@ export interface PaymentEvent {
   network?: string;
   verified?: boolean;
   transaction?: string;
+  insight?: string;
   cycle?: number;
   timestamp: number;
 }
