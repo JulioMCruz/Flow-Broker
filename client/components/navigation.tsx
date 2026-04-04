@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import dynamic from "next/dynamic"
+const ConnectButton = dynamic(() => import("@rainbow-me/rainbowkit").then(m => m.ConnectButton), { ssr: false })
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -41,7 +43,8 @@ export function Navigation() {
             ))}
           </div>
 
-          {/* CTA Button */}
+          <ConnectButton chainStatus="icon" showBalance={false} />
+            {/* CTA Button */}
           <div className="hidden md:block">
             <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
               <Link href="/find-your-broker">
