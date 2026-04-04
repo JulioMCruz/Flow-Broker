@@ -6,19 +6,24 @@
 
 ### Agent Health Monitor
 - **Trigger:** Cron (every 5 min)
-- **What:** HTTP pings each agent endpoint, marks unresponsive agents as inactive
+- **Action:** HTTP pings each agent endpoint, checks statusCode === 200
+- **Output:** Marks unresponsive agents as inactive on AgentRegistry
 - **Contract:** AgentRegistry on Arc Testnet
 - **Simulation result:** "1-agents-down" (correctly detected 404)
 
 ### Dynamic Pricing Oracle
 - **Trigger:** Cron (every 30 min)
-- **What:** Fetches ETH/USD from CoinGecko, calculates fair prices for each agent
+- **Action:** Fetches ETH/USD from CoinGecko, calculates fair prices
+- **Pricing formula:** `finalPrice = basePrice x costMultiplier x (1 + priceAdjustment)`
+  - `priceAdjustment = clamp((ethPrice - 2000) / 20000, -0.5, 0.5)`
+- **Output:** Batch price update to PricingOracle via KeystoneForwarder
 - **Contract:** PricingOracle on Arc Testnet
-- **Simulation result:** "ETH/USD: $2,052.16 → Prices: [100, 802]"
+- **Simulation result:** "ETH/USD: $2,052.16 -> Prices: [100, 802]"
 
 ### Settlement Monitor
 - **Trigger:** Cron (every 10 min)
-- **What:** Checks backend health and Gateway settlement status
+- **Action:** Checks backend health + Gateway settlement status
+- **Flow:** Decode event -> Confirm batch stats -> Notify backend
 - **Contract:** PaymentAccumulator on Arc Testnet
 - **Simulation result:** "Backend status: ok, services: 10"
 
@@ -35,9 +40,13 @@ bun install
 cre workflow simulate . --target staging-settings
 ```
 
+## Project config
+
+See `project.yaml` for workflow definitions, triggers, and target chains.
+
 ## Key details
 
 - All workflows target Arc Testnet (chain selector: arc-testnet)
-- Contracts use ReceiverTemplate for secure CRE writes
-- Chainlink team can deploy to live DON at the hackathon
+- Contracts use ReceiverTemplate for secure CRE writes via KeystoneForwarder
 - CRE CLI v1.9.0, TS SDK v1.5.0
+- Workflows compile TypeScript -> WASM for execution on Chainlink DON

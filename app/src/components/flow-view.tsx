@@ -26,21 +26,45 @@ const profileColor: Record<string, { bg: string; border: string; badge: string }
   Alpha: { bg: "#fef2f2", border: "#fca5a5", badge: "bg-red-500 text-white" },
 };
 
+function parseAmount(amount: string): number {
+  const n = parseFloat(amount.replace("$", ""));
+  return isNaN(n) ? 0 : n;
+}
+
 export function FlowView({ payments, isRunning }: FlowViewProps) {
+  // Calculate earnings per provider and spending per broker
+  const { providerEarnings, brokerSpending } = useMemo(() => {
+    const pe: Record<string, number> = {};
+    const bs: Record<string, number> = {};
+    for (const p of payments) {
+      const amt = parseAmount(p.amount);
+      // Provider earnings
+      pe[p.service] = (pe[p.service] || 0) + amt;
+      // Broker spending
+      const bName = brokerLabel(p.worker);
+      bs[bName] = (bs[bName] || 0) + amt;
+    }
+    return { providerEarnings: pe, brokerSpending: bs };
+  }, [payments]);
+
   const nodes: Node[] = useMemo(() => {
     const brokerNodes: Node[] = BROKERS.map((b, i) => {
       const colors = profileColor[b.profile] || profileColor.Balanced;
+      const spent = brokerSpending[b.label] || 0;
       return {
         id: `broker-${b.id}`,
-        position: { x: 0, y: i * 68 },
+        position: { x: 0, y: i * 78 },
         data: {
           label: (
             <div className="text-left w-full">
               <div className="flex justify-between items-center gap-2">
-                <span className="font-semibold text-[11px] text-gray-800">{b.label}</span>
-                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${colors.badge}`}>{b.profile}</span>
+                <span className="font-bold text-[15px] text-gray-800">{b.label}</span>
+                <span className={`text-[9px] px-2 py-0.5 rounded-full font-medium ${colors.badge}`}>{b.profile}</span>
               </div>
-              <div className="text-[9px] text-gray-500 mt-0.5">{b.cost} · {b.desc}</div>
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-[12px] text-gray-500">{b.cost} · {b.desc}</span>
+                {spent > 0 && <span className="text-[11px] text-red-500 font-mono font-semibold">-${spent.toFixed(6)}</span>}
+              </div>
             </div>
           ),
         },
@@ -49,41 +73,52 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
           background: colors.bg,
           border: `1.5px solid ${colors.border}`,
           borderRadius: 10,
-          padding: "6px 10px",
-          fontSize: 10,
-          width: 220,
+          padding: "8px 12px",
+          fontSize: 11,
+          width: 240,
         },
       };
     });
 
-    const providerNodes: Node[] = Object.entries(PROVIDERS).map(([key, p], i) => ({
-      id: `provider-${key}`,
-      position: { x: 520, y: i * 68 },
-      data: {
-        label: (
-          <div className="text-left w-full">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold text-[11px] text-gray-800">{p.label}</span>
-              <span className="text-[9px] text-emerald-600 font-mono font-semibold">{p.price}</span>
+    const providerNodes: Node[] = Object.entries(PROVIDERS).map(([key, p], i) => {
+      const earned = providerEarnings[key] || 0;
+      const hasEarnings = earned > 0;
+      return {
+        id: `provider-${key}`,
+        position: { x: 560, y: i * 78 },
+        data: {
+          label: (
+            <div className="text-left w-full">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-[15px] text-gray-800">{p.label}</span>
+                <span className="text-[12px] text-emerald-600 font-mono font-semibold">{p.price}</span>
+              </div>
+              <div className="text-[12px] text-gray-400 mt-0.5">{p.type}</div>
+              <div className="flex justify-between items-center mt-0.5">
+                <span className="text-[11px] text-blue-400 font-mono">{p.ens}</span>
+                {hasEarnings && (
+                  <span className="text-[12px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 rounded">
+                    +${earned.toFixed(6)}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="text-[9px] text-gray-400 mt-0.5">{p.type}</div>
-            <div className="text-[8px] text-blue-400 font-mono">{p.ens}</div>
-          </div>
-        ),
-      },
-      targetPosition: Position.Left,
-      style: {
-        background: "#f8fafc",
-        border: "1.5px solid #cbd5e1",
-        borderRadius: 10,
-        padding: "5px 10px",
-        fontSize: 10,
-        width: 280,
-      },
-    }));
+          ),
+        },
+        targetPosition: Position.Left,
+        style: {
+          background: hasEarnings ? "#f0fdf4" : "#f8fafc",
+          border: hasEarnings ? "1.5px solid #86efac" : "1.5px solid #cbd5e1",
+          borderRadius: 10,
+          padding: "8px 12px",
+          fontSize: 11,
+          width: 300,
+        },
+      };
+    });
 
     return [...brokerNodes, ...providerNodes];
-  }, []);
+  }, [providerEarnings, brokerSpending]);
 
   const edges: Edge[] = useMemo(() => {
     if (!isRunning && payments.length === 0) return [];
@@ -121,7 +156,7 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
   }, [payments, isRunning]);
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white" style={{ height: "580px", width: "100%" }}>
+    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white" style={{ height: "100%", width: "100%" }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

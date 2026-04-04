@@ -12,6 +12,9 @@ export interface PaymentEvent {
   insight?: string;
   cycle?: number;
   timestamp: number;
+  scheme?: string;
+  protocol?: string;
+  fee?: string;
 }
 
 export interface StatsData {
