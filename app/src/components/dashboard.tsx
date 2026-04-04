@@ -41,11 +41,11 @@ export function Dashboard() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
+    <div className="w-full px-4 py-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Flow Broker</h1>
+          <h1 className="text-2xl font-bold">Flow Broker</h1>
           <p className="text-xs text-gray-400">Autonomous AI Broker on Arc</p>
         </div>
         <div className="flex items-center gap-3">
