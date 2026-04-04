@@ -1,13 +1,16 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useState, useEffect } from "react";
 
 export function WalletButton() {
-  return (
-    <ConnectButton
-      chainStatus="icon"
-      showBalance={false}
-      accountStatus="avatar"
-    />
-  );
+  const [Button, setButton] = useState<any>(null);
+
+  useEffect(() => {
+    import("@rainbow-me/rainbowkit").then(({ ConnectButton }) => {
+      setButton(() => ConnectButton);
+    });
+  }, []);
+
+  if (!Button) return null;
+  return <Button chainStatus="icon" showBalance={false} accountStatus="avatar" />;
 }
