@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -9,3 +10,5 @@ const nextConfig = {
 }
 
 export default nextConfig
+
+// Force static export for Netlify
