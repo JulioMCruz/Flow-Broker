@@ -73,7 +73,7 @@ export function WalletActivation({ brokerName, depositAmount }: Props) {
                 View on ArcScan → {txHash.slice(0, 20)}...
               </a>
             )}
-            <a href="https://flowbroker-app.netlify.app" target="_blank" rel="noopener noreferrer"
+            <a href={process.env.NEXT_PUBLIC_DASHBOARD_URL || "https://flowbroker-app.netlify.app"} target="_blank" rel="noopener noreferrer"
               className="block w-full py-4 text-center rounded-lg bg-primary text-primary-foreground text-lg font-medium hover:bg-primary/90 transition-colors">
               🚀 View Live Dashboard →
             </a>
