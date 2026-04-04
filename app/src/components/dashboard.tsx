@@ -41,12 +41,12 @@ export function Dashboard() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-6 space-y-5">
+    <div className="max-w-7xl mx-auto px-8 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Flow Broker</h1>
-          <p className="text-xs text-gray-400">Autonomous AI Broker on Arc</p>
+          <h1 className="text-3xl font-bold">Flow Broker</h1>
+          <p className="text-sm text-gray-500">Autonomous AI Broker on Arc</p>
         </div>
         <div className="flex items-center gap-3">
           {!connected && (
@@ -62,7 +62,7 @@ export function Dashboard() {
             </>
           )}
           <button onClick={handleStart}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium ${connected ? "bg-gray-100 text-gray-600" : "bg-gray-900 text-white"}`}>
+            className={`px-6 py-2.5 rounded-lg text-sm font-semibold ${connected ? "bg-gray-100 text-gray-600" : "bg-gray-900 text-white"}`}>
             {connected ? "Stop" : "Start"}
           </button>
         </div>
@@ -103,7 +103,7 @@ export function Dashboard() {
               } catch {}
             }
           }}
-            className={`px-3 py-1 rounded-t text-xs ${tab === t ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}>
+            className={`px-4 py-2 rounded-t text-sm ${tab === t ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}>
             {t === "flow" ? "Flow" : t === "calls" ? "Calls" : t === "settlement" ? "Settlement" : t === "cre" ? "CRE" : t === "verify" ? "Verify" : "Protocols"}
           </button>
         ))}

@@ -23,15 +23,15 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
   const nodes: Node[] = useMemo(() => {
     const brokerNodes: Node[] = BROKERS.map((b, i) => ({
       id: `broker-${b.id}`,
-      position: { x: 50, y: 30 + i * 52 },
+      position: { x: 50, y: 20 + i * 68 },
       data: {
         label: (
           <div className="text-left">
             <div className="flex justify-between items-center">
-              <span className="font-medium text-[10px]">{b.label}</span>
+              <span className="font-medium text-xs">{b.label}</span>
               <span className={`text-[7px] px-1 rounded ${b.profile === "Conservative" ? "bg-blue-100 text-blue-600" : b.profile === "Balanced" ? "bg-green-100 text-green-600" : b.profile === "Growth" ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-600"}`}>{b.profile}</span>
             </div>
-            <div className="text-[8px] text-gray-400">{b.cost} · {b.desc}</div>
+            <div className="text-[10px] text-gray-400">{b.cost} · {b.desc}</div>
           </div>
         ),
       },
@@ -40,24 +40,24 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
         background: "#fef2f2",
         border: "1px solid #fca5a5",
         borderRadius: 8,
-        padding: "4px 8px",
-        fontSize: 10,
-        width: 160,
+        padding: "8px 12px",
+        fontSize: 11,
+        width: 200,
       },
     }));
 
     const providerNodes: Node[] = Object.entries(PROVIDERS).map(([key, p], i) => ({
       id: `provider-${key}`,
-      position: { x: 500, y: 10 + i * 46 },
+      position: { x: 500, y: 10 + i * 58 },
       data: {
         label: (
           <div className="text-left">
             <div className="flex justify-between items-center">
-              <span className="font-medium text-[10px]">{p.label}</span>
+              <span className="font-medium text-xs">{p.label}</span>
               <span className="text-[8px] text-green-600 font-mono ml-1">{p.price}</span>
             </div>
-            <div className="text-[8px] text-gray-400">{p.type}</div>
-            <div className="text-[7px] text-blue-400 font-mono">{p.ens}</div>
+            <div className="text-[10px] text-gray-400">{p.type}</div>
+            <div className="text-[9px] text-blue-400 font-mono">{p.ens}</div>
           </div>
         ),
       },
@@ -66,9 +66,9 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
         background: "#f0fdf4",
         border: "1px solid #86efac",
         borderRadius: 8,
-        padding: "4px 8px",
-        fontSize: 10,
-        width: 220,
+        padding: "8px 12px",
+        fontSize: 11,
+        width: 260,
       },
     }));
 
@@ -108,7 +108,7 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
   }, [payments, isRunning]);
 
   return (
-    <div className="h-[440px] border border-gray-200 rounded-lg overflow-hidden">
+    <div className="h-[600px] border border-gray-200 rounded-lg overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
