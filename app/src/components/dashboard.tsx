@@ -5,6 +5,7 @@ import { useWebSocket } from "@/lib/useWebSocket";
 import { api } from "@/lib/api";
 import { BROKERS, PROVIDERS, providerLabel, brokerLabel } from "@/lib/agents";
 import { FlowView } from "@/components/flow-view";
+import { BountyPanel } from "@/components/bounty-panel";
 
 const PROFILES = [
   { id: "conservative", label: "Conservative", desc: "Low risk, 4 providers", color: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -17,7 +18,7 @@ export function Dashboard() {
   const isRunning = connected && !isComplete;
   const [txCount, setTxCount] = useState("200");
   const [profile, setProfile] = useState("balanced");
-  const [tab, setTab] = useState<"flow" | "calls" | "settlement" | "cre" | "verify">("flow");
+  const [tab, setTab] = useState<"flow" | "calls" | "settlement" | "cre" | "verify" | "bounty">("flow");
   const [creLogs, setCreLogs] = useState<any[]>([]);
   const [creResults, setCreResults] = useState<any[]>([]);
   const [gwStatus, setGwStatus] = useState<any>(null);
@@ -86,7 +87,7 @@ export function Dashboard() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-gray-100 pb-1">
-        {(["flow", "calls", "settlement", "cre", "verify"] as const).map(t => (
+        {(["flow", "calls", "settlement", "cre", "verify", "bounty"] as const).map(t => (
           <button key={t} onClick={async () => {
             setTab(t);
             if (t === "settlement") {
@@ -103,7 +104,7 @@ export function Dashboard() {
             }
           }}
             className={`px-3 py-1 rounded-t text-xs ${tab === t ? "bg-gray-900 text-white" : "text-gray-400 hover:bg-gray-50"}`}>
-            {t === "flow" ? "Flow" : t === "calls" ? "Calls" : t === "settlement" ? "Settlement" : t === "cre" ? "CRE" : "Verify"}
+            {t === "flow" ? "Flow" : t === "calls" ? "Calls" : t === "settlement" ? "Settlement" : t === "cre" ? "CRE" : t === "verify" ? "Verify" : "Protocols"}
           </button>
         ))}
       </div>
@@ -279,6 +280,14 @@ export function Dashboard() {
             <p className="text-[10px] text-gray-500">Health Monitor, Dynamic Pricing, Settlement</p>
           </div>
         </div>
+      )}
+      {/* Bounty View */}
+      {tab === "bounty" && (
+        <BountyPanel
+          totalPayments={stats.totalPayments}
+          totalVolume={stats.totalVolume}
+          gasSaved={stats.gasSaved}
+        />
       )}
     </div>
   );

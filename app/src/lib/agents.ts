@@ -1,27 +1,27 @@
 // Broker agents (buyers) — each has a strategy and specific providers it calls
 export const BROKERS = [
-  { id: "momentum", label: "Momentum", providers: ["search", "sentiment"], apy: "12.4%", risk: "7/10", strategy: "Trend Following", freq: "Hourly", rep: 4 },
-  { id: "news-reaction", label: "News Reaction", providers: ["search", "sentiment", "summarize"], apy: "8.7%", risk: "6/10", strategy: "Event Driven", freq: "Real-time", rep: 3 },
-  { id: "execution", label: "Execution", providers: ["search"], apy: "6.1%", risk: "4/10", strategy: "Optimal Execution", freq: "Per-trade", rep: 5 },
-  { id: "risk-manager", label: "Risk Manager", providers: ["search", "sentiment", "llm"], apy: "—", risk: "1/10", strategy: "Risk Validation", freq: "Every decision", rep: 5 },
-  { id: "mean-reversion", label: "Mean Reversion", providers: ["search", "embeddings"], apy: "9.3%", risk: "5/10", strategy: "Mean Reversion", freq: "Daily", rep: 4 },
-  { id: "rebalancing", label: "Rebalancing", providers: ["search", "code"], apy: "5.2%", risk: "3/10", strategy: "Portfolio Balance", freq: "Weekly", rep: 4 },
-  { id: "yield-strategy", label: "Yield Strategy", providers: ["search", "classify"], apy: "4.8%", risk: "2/10", strategy: "Yield / T-Bills", freq: "Weekly", rep: 5 },
-  { id: "cross-market", label: "Cross Market", providers: ["search", "sentiment", "classify"], apy: "11.6%", risk: "8/10", strategy: "Cross-Asset Arb", freq: "Hourly", rep: 3 },
+  { id: "guardian", label: "Guardian", profile: "Conservative", providers: ["search"], cost: "~$3/mo", desc: "Market data only", risk: "Low", rep: 4 },
+  { id: "sentinel", label: "Sentinel", profile: "Conservative", providers: ["search", "sentiment"], cost: "~$5/mo", desc: "Market + News sentiment", risk: "Low-Med", rep: 4 },
+  { id: "steady", label: "Steady", profile: "Balanced", providers: ["search", "sentiment", "llm"], cost: "~$10/mo", desc: "Market + Sentiment + AI", risk: "Medium", rep: 5 },
+  { id: "navigator", label: "Navigator", profile: "Balanced", providers: ["search", "sentiment", "llm", "code"], cost: "~$15/mo", desc: "Full analysis + Optimizer", risk: "Medium", rep: 5 },
+  { id: "growth", label: "Growth", profile: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data"], cost: "~$25/mo", desc: "5 intelligence services", risk: "Med-High", rep: 4 },
+  { id: "momentum", label: "Momentum", profile: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data", "translate"], cost: "~$35/mo", desc: "6 services + On-chain", risk: "Med-High", rep: 3 },
+  { id: "apex", label: "Apex", profile: "Alpha", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision"], cost: "~$50/mo", desc: "8 core services", risk: "High", rep: 4 },
+  { id: "titan", label: "Titan", profile: "Alpha", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision", "translate", "summarize"], cost: "~$75/mo", desc: "All 10 services", risk: "High", rep: 5 },
 ];
 
 // Provider agents (sellers) — intelligence services
-export const PROVIDERS: Record<string, { label: string; type: string }> = {
-  search: { label: "Market Data", type: "Price, volume, volatility" },
-  llm: { label: "AI Analysis", type: "AI reasoning + recommendations" },
-  sentiment: { label: "Sentiment", type: "News + social scoring" },
-  classify: { label: "Classifier", type: "Event categorization" },
-  data: { label: "Portfolio Data", type: "Portfolio state" },
-  embeddings: { label: "Embeddings", type: "Semantic similarity" },
-  translate: { label: "Translator", type: "Language normalization" },
-  summarize: { label: "Summarizer", type: "Content compression" },
-  vision: { label: "Chart Analyzer", type: "Visual interpretation" },
-  code: { label: "Compute", type: "Calculations + scripts" },
+export const PROVIDERS: Record<string, { label: string; type: string; price: string; ens: string }> = {
+  search: { label: "Market data feed", type: "Real-time prices, volume, spreads", price: "$0.000002/call", ens: "market-data.flowbroker.eth" },
+  sentiment: { label: "News sentiment scorer", type: "Bullish/bearish score in real-time", price: "$0.0003/call", ens: "sentiment.flowbroker.eth" },
+  llm: { label: "AI analysis engine", type: "LLM streaming, stops when agent has enough", price: "$0.015/analysis", ens: "ai-analysis.flowbroker.eth" },
+  embeddings: { label: "Pattern recognition", type: "Chart patterns, supports, resistances", price: "$0.0005/call", ens: "embeddings.flowbroker.eth" },
+  classify: { label: "Risk calculator", type: "VaR, implied volatility, correlations", price: "$0.0004/call", ens: "classifier.flowbroker.eth" },
+  data: { label: "On-chain analytics", type: "Whale movements, DeFi TVL, exchange flows", price: "$0.001/call", ens: "portfolio-data.flowbroker.eth" },
+  translate: { label: "Macro signals", type: "Fed decisions, inflation, GDP data", price: "$0.0008/call", ens: "translator.flowbroker.eth" },
+  code: { label: "Portfolio optimizer", type: "MPT allocation, rebalancing signals", price: "$0.005/call", ens: "compute.flowbroker.eth" },
+  vision: { label: "Execution optimizer", type: "Smart order routing, slippage minimization", price: "$0.002/call", ens: "chart-analyzer.flowbroker.eth" },
+  summarize: { label: "Report generator", type: "Decision summary for your dashboard", price: "$0.015/call", ens: "summarizer.flowbroker.eth" },
 };
 
 export function providerLabel(name: string) {
@@ -30,7 +30,7 @@ export function providerLabel(name: string) {
 
 export function brokerLabel(addr: string) {
   const idx = WORKER_ADDRS.indexOf(addr.toLowerCase());
-  return idx >= 0 && idx < BROKERS.length ? BROKERS[idx].label : addr.slice(0, 8);
+  return idx >= 0 && idx < BROKERS.length ? BROKERS[idx].label : `Broker ${addr.slice(0, 6)}`;
 }
 
 export const WORKER_ADDRS = [
