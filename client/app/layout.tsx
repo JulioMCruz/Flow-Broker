@@ -1,7 +1,6 @@
 import { Providers } from './providers'
 import type { Metadata, Viewport } from 'next'
 import { DM_Serif_Display, Outfit, DM_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const dmSerifDisplay = DM_Serif_Display({
@@ -59,7 +58,7 @@ export default function RootLayout({
     <html lang="en" className="dark" data-scroll-behavior="smooth">
       <body className={`${outfit.variable} ${dmSerifDisplay.variable} ${dmMono.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {process.env.NODE_ENV === 'production' && }
       </body>
     </html>
   )
