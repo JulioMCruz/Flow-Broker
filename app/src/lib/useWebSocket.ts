@@ -20,6 +20,7 @@ export interface StatsData {
   dollarsPerSec: string;
   activeWorkers: number;
   gasSaved: string;
+  platformFees: string;
   elapsed: number;
 }
 
@@ -33,7 +34,14 @@ export type WSEvent =
   | { type: "stats"; data: StatsData }
   | { type: "worker_joined"; data: WorkerEvent }
   | { type: "worker_finished"; data: WorkerEvent }
-  | { type: "complete"; data: StatsData };
+  | { type: "complete"; data: StatsData }
+  | { type: "cre_log"; data: { workflow: string; level: string; message: string; timestamp: string } }
+  | { type: "cre_start"; data: any }
+  | { type: "cre_complete"; data: any }
+  | { type: "cre_result"; data: any }
+  | { type: "ens_update"; data: any }
+  | { type: "started"; data: any }
+  | { type: "stopped"; data: any };
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3002";
 
@@ -46,6 +54,7 @@ export function useWebSocket() {
     dollarsPerSec: "0",
     activeWorkers: 0,
     gasSaved: "0",
+    platformFees: "0",
     elapsed: 0,
   });
   const [payments, setPayments] = useState<PaymentEvent[]>([]);
@@ -62,7 +71,7 @@ export function useWebSocket() {
     ws.onopen = () => {
       setConnected(true);
       setIsComplete(false);
-      console.log("🔌 Connected to PerkMesh orchestrator");
+      console.log("🔌 Connected to Flow Broker orchestrator");
     };
 
     ws.onclose = () => {
@@ -75,10 +84,28 @@ export function useWebSocket() {
 
       switch (msg.type) {
         case "payment":
-          setPayments((prev) => [msg.data, ...prev].slice(0, 100)); // keep last 100
+          setPayments((prev) => [msg.data, ...prev].slice(0, 100));
+          console.log(`%c[x402] %c${msg.data.worker?.slice(0,8)}→${msg.data.service} %c${msg.data.amount} %c✓ verified`, "color: #f59e0b", "color: #d1d5db", "color: #22c55e", "color: #22c55e; font-weight: bold");
           break;
         case "stats":
           setStats(msg.data);
+          break;
+        case "cre_log":
+          console.log(
+            `%c[CRE] %c[${msg.data.workflow}] %c${msg.data.message}`,
+            "color: #22c55e; font-weight: bold",
+            "color: #3b82f6",
+            msg.data.level === "ERROR" ? "color: #ef4444" : msg.data.level === "WARN" ? "color: #eab308" : "color: #d1d5db"
+          );
+          break;
+        case "cre_start":
+          console.log("%c[CRE] === Workflow Execution Started ===", "color: #22c55e; font-weight: bold; font-size: 12px");
+          break;
+        case "cre_complete":
+          console.log("%c[CRE] === All Workflows Complete ===", "color: #22c55e; font-weight: bold; font-size: 12px");
+          break;
+        case "ens_update":
+          console.log(`%c[ENS] Price updated: ${msg.data.agent} → ${msg.data.value} (tx: ${msg.data.tx?.slice(0, 14)}...)`, "color: #8b5cf6; font-weight: bold");
           break;
         case "worker_joined":
           setWorkers((prev) => new Map(prev).set(msg.data.name, msg.data));

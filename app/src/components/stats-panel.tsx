@@ -9,12 +9,12 @@ interface StatsPanelProps {
 
 export function StatsPanel({ stats }: StatsPanelProps) {
   const items = [
-    { label: "Payments", value: stats?.totalPayments.toLocaleString() || "0" },
+    { label: "Intel Calls", value: stats?.totalPayments.toLocaleString() || "0" },
     { label: "Volume", value: `$${stats?.totalVolume || "0"}` },
-    { label: "Rate", value: `${stats?.paymentsPerMin || 0}/min` },
-    { label: "Workers", value: `${stats?.activeWorkers || 0}` },
+    { label: "Fees (10%)", value: `$${stats?.platformFees || "0"}` },
+    { label: "Brokers", value: `${stats?.activeWorkers || 0}` },
     { label: "Gas Saved", value: `$${stats?.gasSaved || "0"}` },
-    { label: "Time", value: `${stats?.elapsed || 0}s` },
+    { label: "Rate", value: `${stats?.paymentsPerMin || 0}/min` },
   ];
 
   return (
