@@ -1,0 +1,39 @@
+"use client";
+
+import dynamic from "next/dynamic";
+import { Dashboard } from "@/components/dashboard";
+
+const Providers = dynamic(
+  () => import("./providers").then((m) => m.Providers),
+  { ssr: false }
+);
+
+const ConnectButton = dynamic(
+  () => import("@rainbow-me/rainbowkit").then((m) => m.ConnectButton),
+  { ssr: false }
+);
+
+export default function Home() {
+  return (
+    <Providers>
+      <main className="flex min-h-screen flex-col">
+        {/* Header */}
+        <header className="border-b border-border px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🕸️</span>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">PerkMesh</h1>
+              <p className="text-xs text-muted-foreground">
+                Live Agent Economy on Arc
+              </p>
+            </div>
+          </div>
+          <ConnectButton />
+        </header>
+
+        {/* Dashboard */}
+        <Dashboard />
+      </main>
+    </Providers>
+  );
+}
