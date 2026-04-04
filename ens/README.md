@@ -1,30 +1,15 @@
 # ENS Integration
 
-ENS is the service discovery layer. Agents have ENS subnames with text records that define their endpoint, price, capabilities, and status.
+Flow Broker uses flowbroker.eth as the agent service mesh.
 
-## How we use ENS
+18 subnames: 8 broker agents + 10 information providers.
 
-1. Registered `perkmesh.eth` on Sepolia
-2. Created 10 subnames (search.perkmesh.eth, llm.perkmesh.eth, etc.)
-3. Each subname has 4 text records:
-   - `com.x402.endpoint` — where to send payment requests
-   - `com.x402.price` — price per call in USDC
-   - `com.agent.capabilities` — what the agent does
-   - `com.agent.status` — active or inactive
-4. Workers resolve ENS before paying — real discovery, not hardcoded
-5. Change a text record → agents pay the new price within 30 seconds
+Each provider has text records:
+- com.x402.price — price per call (variable)
+- com.agent.capabilities — what it offers
+- com.agent.type — provider or broker
+- com.agent.status — active/inactive
 
-## ENS resolver
+Brokers discover providers via ENS before each call. Change a text record → agents pay new price within 30s.
 
-```typescript
-import { discoverAgents } from "./ens-resolver";
-
-const agents = await discoverAgents();
-// Returns 10 agents with endpoint, price, capabilities, status
-// All read from Sepolia ENS text records
-```
-
-## Verify
-
-- https://sepolia.app.ens.domains/perkmesh.eth
-- 10 subnames, 40 text records total
+ENS: https://sepolia.app.ens.domains/flowbroker.eth
