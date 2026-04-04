@@ -29,7 +29,7 @@ const seedLog: LogEntry[] = [
     id: "seed-1",
     timestamp: Date.now() - 1000,
     type: "payment",
-    message: "worker-07 → llm.perkmesh.eth | $0.0142 USDC (142 tokens, streaming)",
+    message: "worker-07 → llm.flowbroker.eth | $0.0142 USDC (142 tokens, streaming)",
     txHash: "0x3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a",
   },
   {
@@ -43,7 +43,7 @@ const seedLog: LogEntry[] = [
     id: "seed-3",
     timestamp: Date.now() - 8000,
     type: "job-completed",
-    message: "Job #41 completed: CRE evaluator verified ✓ | $0.015 USDC released to llm.perkmesh.eth",
+    message: "Job #41 completed: CRE evaluator verified ✓ | $0.015 USDC released to llm.flowbroker.eth",
     txHash: "0xfedcba9876543210fedcba9876543210fedcba98",
   },
 ];
