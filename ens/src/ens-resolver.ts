@@ -84,6 +84,41 @@ export async function discoverBrokers(): Promise<ENSAgentRecord[]> {
   return active;
 }
 
+export interface ENSBrokerProfile {
+  name: string;
+  ensName: string;
+  profile: string;
+  apy: string;
+  cost: string;
+  risk: string;
+  providers: string;
+  strategy: string;
+}
+
+const BROKER_NAMES_LIST = [
+  "guardian", "sentinel", "steady", "navigator",
+  "growth", "momentum", "apex", "titan",
+];
+
+export async function discoverBrokerProfiles(): Promise<ENSBrokerProfile[]> {
+  console.log(`Discovering broker profiles from ENS (${ENS_DOMAIN})...`);
+  const results = await Promise.all(BROKER_NAMES_LIST.map(async (name) => {
+    const ensName = `${name}.${ENS_DOMAIN}`;
+    try {
+      const [profile, apy, cost, risk, providers, strategy] = await Promise.all([
+        ensClient.getEnsText({ name: normalize(ensName), key: "com.broker.profile" }),
+        ensClient.getEnsText({ name: normalize(ensName), key: "com.broker.apy" }),
+        ensClient.getEnsText({ name: normalize(ensName), key: "com.broker.cost" }),
+        ensClient.getEnsText({ name: normalize(ensName), key: "com.broker.risk" }),
+        ensClient.getEnsText({ name: normalize(ensName), key: "com.broker.providers" }),
+        ensClient.getEnsText({ name: normalize(ensName), key: "com.broker.strategy" }),
+      ]);
+      return { name, ensName, profile: profile || "", apy: apy || "", cost: cost || "", risk: risk || "", providers: providers || "", strategy: strategy || "" };
+    } catch { return null; }
+  }));
+  return results.filter((r): r is ENSBrokerProfile => r !== null);
+}
+
 // Keep old function for compatibility
 export async function discoverAgents() { return discoverProviders(); }
 

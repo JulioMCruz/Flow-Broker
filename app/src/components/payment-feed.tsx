@@ -52,6 +52,12 @@ export function PaymentFeed({ isRunning, payments = [] }: PaymentFeedProps) {
               <span className="text-gray-400">wallet</span>
               <a href={`${EXPLORER}/${selected.worker}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline block truncate">{selected.worker}</a>
             </div>
+            {(selected as any).insight && (
+              <div className="mt-2 p-2 bg-blue-50 rounded">
+                <span className="text-gray-400 text-[10px]">data returned</span>
+                <p className="text-blue-700 font-sans">{(selected as any).insight}</p>
+              </div>
+            )}
             {selected.transaction && (
               <div>
                 <span className="text-gray-400">gateway ref</span>
@@ -72,14 +78,19 @@ export function PaymentFeed({ isRunning, payments = [] }: PaymentFeedProps) {
                 <div
                   key={`${p.timestamp}-${i}`}
                   onClick={() => setSelected(p)}
-                  className="px-3 py-1.5 flex items-center gap-2 hover:bg-gray-50 cursor-pointer font-mono text-xs"
+                  className="px-3 py-1.5 hover:bg-gray-50 cursor-pointer font-mono text-xs border-b border-gray-50"
                 >
-                  <span className="text-gray-300 w-14">{new Date(p.timestamp).toLocaleTimeString()}</span>
-                  <span className="text-gray-700 w-20 font-medium truncate">{brokerLabel(p.worker)}</span>
-                  <span className="text-gray-300">→</span>
-                  <span className="text-gray-600 w-20 truncate">{providerLabel(p.service)}</span>
-                  <span className="text-green-500 text-[10px]">✓</span>
-                  <span className="text-gray-500 ml-auto">{p.amount}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-300 w-14">{new Date(p.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-gray-700 w-18 font-medium truncate">{brokerLabel(p.worker)}</span>
+                    <span className="text-gray-300">→</span>
+                    <span className="text-gray-600 w-18 truncate">{providerLabel(p.service)}</span>
+                    <span className="text-green-500 text-[10px]">✓</span>
+                    <span className="text-gray-500 ml-auto">{p.amount}</span>
+                  </div>
+                  {(p as any).insight && (
+                    <div className="ml-16 text-[10px] text-blue-500 font-sans truncate">{(p as any).insight}</div>
+                  )}
                 </div>
               ))}
             </div>
