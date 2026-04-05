@@ -8,12 +8,14 @@ import { BROKERS, PROVIDERS, providerLabel, brokerLabel } from "@/lib/agents";
 import { FlowView } from "@/components/flow-view";
 import { BountyPanel } from "@/components/bounty-panel";
 
+const MAX_TRADES = 20;
+
 export function Dashboard() {
-  const { connected, stats, payments, isComplete, connect, disconnect, reset, priceUpdates } = useWebSocket();
+  const { connected, stats, payments, isComplete, connect, disconnect, reset, priceUpdates, trades } = useWebSocket();
   const isRunning = connected && !isComplete;
   const [txCount, setTxCount] = useState("200");
   const [profile, setProfile] = useState("balanced");
-  const [tab, setTab] = useState<"flow" | "calls" | "settlement" | "cre" | "ens" | "verify" | "bounty">("flow");
+  const [tab, setTab] = useState<"flow" | "calls" | "trades" | "settlement" | "cre" | "ens" | "verify" | "bounty">("flow");
   const [creLogs, setCreLogs] = useState<any[]>([]);
   const [creResults, setCreResults] = useState<any[]>([]);
   const [gwStatus, setGwStatus] = useState<any>(null);
@@ -53,6 +55,7 @@ export function Dashboard() {
   const TABS = [
     { id: "flow", label: "Flow" },
     { id: "calls", label: "Calls" },
+    { id: "trades", label: "Trades" },
     { id: "settlement", label: "Settlement" },
     { id: "cre", label: "CRE" },
     { id: "ens", label: "ENS" },
@@ -89,8 +92,8 @@ export function Dashboard() {
           { l: "VOLUME", v: `$${stats.totalVolume}`, color: "text-blue-600" },
           { l: "FEES (10%)", v: `$${stats.platformFees || "0"}`, color: "text-amber-600" },
           { l: "BROKERS", v: String(stats.activeWorkers), color: "text-gray-900" },
+          { l: "TRADES", v: `${(stats as any).totalTrades || trades.length}/${MAX_TRADES}`, color: "text-orange-600" },
           { l: "GAS SAVED", v: `$${stats.gasSaved}`, color: "text-emerald-600" },
-          { l: "RATE", v: `${stats.paymentsPerMin}/min`, color: "text-purple-600" },
         ].map(s => (
           <div key={s.l} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
             <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium">{s.l}</p>
@@ -152,6 +155,18 @@ export function Dashboard() {
       {/* ── Flow Tab ── */}
       {tab === "flow" && (
         <div className="space-y-3">
+          {/* Trade Notification Banner */}
+          {trades.length > 0 && (Date.now() - trades[0].timestamp < 15000) && (
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-lg animate-pulse">
+              <span className="text-[10px] font-bold text-orange-700 border border-orange-300 rounded px-1.5 py-0.5 bg-white">SWAP</span>
+              <span className="text-xs text-orange-800 font-medium">{trades[0].broker}</span>
+              <span className="text-xs text-orange-600 font-mono">{trades[0].amountIn} → {trades[0].amountOut}</span>
+              <span className="text-[10px] text-emerald-600 font-semibold">via Uniswap</span>
+              <a href={trades[0].explorer} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] text-orange-500 hover:underline ml-auto font-mono">{trades[0].txHash?.slice(0, 14)}... →</a>
+            </div>
+          )}
+
           {/* CRE Price Update Banner */}
           {priceUpdates.length > 0 && (Date.now() - priceUpdates[0].timestamp < 30000) && (
             <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg animate-pulse">
@@ -334,6 +349,84 @@ export function Dashboard() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Trades Tab ── */}
+      {tab === "trades" && (
+        <div className="space-y-4">
+          {/* How trading works */}
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-orange-800 mb-2">Uniswap API Trading (Sepolia Testnet)</p>
+            <div className="grid grid-cols-5 gap-2 text-[10px] text-orange-700 font-mono">
+              <div className="bg-white rounded p-2 text-center border border-orange-100">
+                <p className="font-semibold text-orange-900">1. Intelligence</p>
+                <p>x402 calls to providers</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-orange-100">
+                <p className="font-semibold text-orange-900">2. Analyze</p>
+                <p>LLM → BUY/HOLD signal</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-orange-100">
+                <p className="font-semibold text-orange-900">3. Quote</p>
+                <p>Uniswap API /quote</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-orange-100">
+                <p className="font-semibold text-orange-900">4. Swap</p>
+                <p>Uniswap API /swap</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-orange-100">
+                <p className="font-semibold text-orange-900">5. Confirm</p>
+                <p>Real tx on Sepolia</p>
+              </div>
+            </div>
+            <p className="text-[9px] text-orange-600 mt-2">Max {MAX_TRADES} trades per session. Each trade: 0.001 ETH → USDC via Uniswap V3 on Sepolia.</p>
+          </div>
+
+          {/* Trade list */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-medium text-gray-700">Uniswap Trades</p>
+                <span className="text-[9px] text-orange-600 border border-orange-200 rounded px-1.5 py-0.5 bg-orange-50 font-semibold">Sepolia</span>
+              </div>
+              <span className="text-[10px] text-gray-400 font-mono">{trades.length}/{MAX_TRADES} trades</span>
+            </div>
+            <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
+              {trades.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 text-gray-400 text-sm gap-2">
+                  <p>Trades appear when brokers receive BUY signals</p>
+                  <p className="text-[10px]">Every 5 intelligence calls → risk check → if BUY → Uniswap swap</p>
+                </div>
+              ) : trades.map((t, i) => (
+                <div key={i} className="px-4 py-3">
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-[10px] text-gray-300 w-16">{new Date(t.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-[9px] text-orange-600 border border-orange-200 rounded px-1.5 py-0.5 bg-orange-50 font-bold">SWAP</span>
+                    <span className="text-gray-800 font-semibold w-24">{t.broker}</span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${t.signal === "EXECUTE_BUY" || t.signal === "BUY" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                      {t.signal}
+                    </span>
+                    <span className="text-gray-500 font-mono">{t.amountIn}</span>
+                    <span className="text-gray-300">→</span>
+                    <span className="text-emerald-600 font-mono font-semibold">{t.amountOut}</span>
+                    <span className={`ml-auto text-[10px] font-semibold ${t.status === "success" ? "text-emerald-500" : "text-red-500"}`}>
+                      {t.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 mt-1.5 ml-20 text-[9px] text-gray-400">
+                    <span>routing: {t.routing}</span>
+                    <span>chain: Sepolia</span>
+                    <span>trade {t.tradeNumber}/{t.maxTrades}</span>
+                    <a href={t.explorer} target="_blank" rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline ml-auto font-mono">
+                      {t.txHash?.slice(0, 18)}... →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
