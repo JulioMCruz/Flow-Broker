@@ -67,12 +67,12 @@ const BROKER_STRATEGIES: Record<string, { signal: string; tokenIn: TokenSymbol; 
     { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "balanced re-entry" },
   ],
   "Navigator": [
-    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "growth play — buying UNI governance token" },
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "WETH", reason: "growth play — wrapping ETH" },
     { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "standard ETH buy" },
   ],
   "Growth":    [
-    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "high conviction — UNI exposure" },
-    { signal: "BUY",         tokenIn: "USDC", tokenOut: "UNI",  reason: "accumulate UNI on signal" },
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "WETH", reason: "high conviction — wrapping ETH for DeFi" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "accumulate WETH on signal" },
   ],
   "Momentum":  [
     { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "momentum trade — trend following" },
