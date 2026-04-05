@@ -214,6 +214,20 @@ async function _doTrade(brokerName: string, signal: string, confidence: string) 
     allTimeTradeHistory.push(trade);
     try { writeFileSync("trade-history.json", JSON.stringify(allTimeTradeHistory, null, 2)); } catch {}
     broadcast({ type: "trade", data: trade });
+
+    // Cross-broker coordination: if buying risk-on asset (UNI/WETH), signal other brokers
+    if (tokenOut === "UNI" || tokenOut === "WETH") {
+      const coordinationSignal = {
+        from: brokerName,
+        signal: "COORDINATION_BUY",
+        asset: tokenOut,
+        reason: `${brokerName} bought ${tokenOut} — coordination signal for aligned brokers`,
+        timestamp: Date.now(),
+      };
+      broadcast({ type: "coordination", data: coordinationSignal });
+      console.log(`[coordination] ${brokerName} → signaling ${tokenOut} buy to network`);
+    }
+
     console.log(`[trade] ${brokerName}: ${signal} → ${tokenIn}→${tokenOut} ${usdcOut} ${tokenOut} (${reason} (${sessionTradeCount}/${MAX_TRADES_PER_SESSION}) tx: ${hash.slice(0, 14)}...`);
 
     return trade;
@@ -920,6 +934,12 @@ app.post("/activate", (req, res) => {
 
 app.get("/activations", (_req, res) => {
   res.json({ activations: recentActivations.slice(0, 5) });
+});
+
+// Coordination signals feed
+const coordinationLog: any[] = [];
+app.get("/coordination", (_req, res) => {
+  res.json({ signals: coordinationLog.slice(-10) });
 });
 
 // STOP endpoint
