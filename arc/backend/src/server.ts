@@ -41,13 +41,25 @@ const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 const NATIVE_ETH = "0x0000000000000000000000000000000000000000";
 const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const MAX_TRADES_PER_SESSION = 20;
-const TRADE_AMOUNT = "1000000000000000"; // 0.001 ETH
+const TRADE_AMOUNT = "100000000000000"; // 0.0001 ETH
 let sessionTradeCount = 0;
 const tradeHistory: any[] = [];
+const allTimeTradeHistory: any[] = [];
 
+// Load saved trade history on startup
+import { readFileSync, writeFileSync } from "fs";
+try {
+  const saved = JSON.parse(readFileSync("trade-history.json", "utf-8"));
+  allTimeTradeHistory.push(...saved);
+  console.log(`[trades] Loaded ${saved.length} historical trades`);
+} catch { /* no history yet */ }
+
+let tradeLock = false;
 async function executeUniswapTrade(brokerName: string, signal: string, confidence: string) {
   if (!UNISWAP_API_KEY || sessionTradeCount >= MAX_TRADES_PER_SESSION) return null;
   if (signal !== "BUY" && signal !== "EXECUTE_BUY") return null;
+  if (tradeLock) return null;
+  tradeLock = true;
 
   const traderKey = process.env.DEPLOYER_KEY as `0x${string}`;
   if (!traderKey) return null;
@@ -103,7 +115,7 @@ async function executeUniswapTrade(brokerName: string, signal: string, confidenc
       confidence,
       tokenIn: "ETH",
       tokenOut: "USDC",
-      amountIn: "0.001 ETH",
+      amountIn: "0.0001 ETH",
       amountOut: `${usdcOut} USDC`,
       txHash: hash,
       chain: "Sepolia (11155111)",
@@ -116,12 +128,16 @@ async function executeUniswapTrade(brokerName: string, signal: string, confidenc
     };
 
     tradeHistory.push(trade);
+    allTimeTradeHistory.push(trade);
+    try { writeFileSync("trade-history.json", JSON.stringify(allTimeTradeHistory, null, 2)); } catch {}
     broadcast({ type: "trade", data: trade });
     console.log(`[trade] ${brokerName}: ${signal} → swapped 0.001 ETH → ${usdcOut} USDC (${sessionTradeCount}/${MAX_TRADES_PER_SESSION}) tx: ${hash.slice(0, 14)}...`);
 
+    tradeLock = false;
     return trade;
   } catch (e: any) {
     console.log(`[trade] ${brokerName}: swap failed — ${e.message}`);
+    tradeLock = false;
     return null;
   }
 }
@@ -307,6 +323,7 @@ app.post("/start", async (_req, res) => {
   stats.totalTrades = 0;
   sessionTradeCount = 0;
   tradeHistory.length = 0;
+  tradeLock = false;
   broadcast({ type: "started", data: getStats() });
 
   const NUM_WORKERS = 8;
@@ -727,9 +744,14 @@ app.post("/cre-run", async (_req, res) => {
   res.json({ workflows: results });
 });
 
-// Trades endpoint — list Uniswap trades executed by brokers
+// Trades endpoint — current session
 app.get("/trades", (_req, res) => {
   res.json({ trades: tradeHistory, count: tradeHistory.length, max: MAX_TRADES_PER_SESSION });
+});
+
+// All-time trade history
+app.get("/trades/history", (_req, res) => {
+  res.json({ trades: allTimeTradeHistory, count: allTimeTradeHistory.length });
 });
 
 // Settlement endpoint — called by CRE Settlement Monitor workflow
