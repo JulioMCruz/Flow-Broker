@@ -88,3 +88,4 @@ See `arc/backend/src/server.ts` — `BROKER_STRATEGIES` and `executeUniswapTrade
 Each broker has a defined token pair strategy. The Routing API (`/quote` with `routingPreference: BEST_PRICE`) finds optimal paths. Coordination signals fire when risk-on assets are bought.
 
 Real trades on Sepolia: see `arc/backend/trade-history.json`.
+
