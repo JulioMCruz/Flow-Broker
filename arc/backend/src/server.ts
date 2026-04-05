@@ -183,7 +183,7 @@ async function _doTrade(brokerName: string, signal: string, confidence: string) 
 
     const tx = swapData.swap;
     const hash = await wallet.sendTransaction({
-      to: tx.to, data: tx.data, value: BigInt(tx.value), gas: 200000n,
+      to: tx.to, data: tx.data, value: BigInt(tx.value), gas: 350000n,
     });
 
     const receipt = await pub.waitForTransactionReceipt({ hash });
