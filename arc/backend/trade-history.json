@@ -151,5 +151,22 @@
     "tradeNumber": 3,
     "maxTrades": 20,
     "timestamp": 1775355906008
+  },
+  {
+    "broker": "Titan",
+    "signal": "EXECUTE_BUY",
+    "confidence": "Sentiment 0.92, risk 3.0/10, pattern bullish. All signals align — proceed.",
+    "tokenIn": "ETH",
+    "tokenOut": "USDC",
+    "amountIn": "0.0001 ETH",
+    "amountOut": "0.61 USDC",
+    "txHash": "0x9ef40531657f499fd086fed51a8599d02a85c22e06727d6e4324e002c9dbe744",
+    "chain": "Sepolia (11155111)",
+    "routing": "CLASSIC",
+    "status": "success",
+    "explorer": "https://sepolia.etherscan.io/tx/0x9ef40531657f499fd086fed51a8599d02a85c22e06727d6e4324e002c9dbe744",
+    "tradeNumber": 4,
+    "maxTrades": 20,
+    "timestamp": 1775355937900
   }
 ]
