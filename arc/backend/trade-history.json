@@ -1,0 +1,53 @@
+[
+  {
+    "broker": "Momentum",
+    "signal": "EXECUTE_BUY",
+    "confidence": "Sentiment 0.84, risk 1.0/10, pattern bullish. All signals align — proceed.",
+    "tokenIn": "ETH",
+    "tokenOut": "USDC",
+    "amountIn": "0.0001 ETH",
+    "amountOut": "0.61 USDC",
+    "txHash": "0xc421c8a9c83890eeda8dd28be26268539258b65ef97b1efadf384b265f2e0598",
+    "chain": "Sepolia (11155111)",
+    "routing": "CLASSIC",
+    "status": "success",
+    "explorer": "https://sepolia.etherscan.io/tx/0xc421c8a9c83890eeda8dd28be26268539258b65ef97b1efadf384b265f2e0598",
+    "tradeNumber": 1,
+    "maxTrades": 20,
+    "timestamp": 1775354340963
+  },
+  {
+    "broker": "Apex",
+    "signal": "EXECUTE_BUY",
+    "confidence": "Sentiment 0.73, risk 2.9/10, pattern bullish. All signals align — proceed.",
+    "tokenIn": "ETH",
+    "tokenOut": "USDC",
+    "amountIn": "0.0001 ETH",
+    "amountOut": "0.61 USDC",
+    "txHash": "0xb11c4e9a2e8fff7c7b67eabba54978e4052974152d100934cd963287dc57cd6b",
+    "chain": "Sepolia (11155111)",
+    "routing": "CLASSIC",
+    "status": "success",
+    "explorer": "https://sepolia.etherscan.io/tx/0xb11c4e9a2e8fff7c7b67eabba54978e4052974152d100934cd963287dc57cd6b",
+    "tradeNumber": 2,
+    "maxTrades": 20,
+    "timestamp": 1775354353691
+  },
+  {
+    "broker": "Steady",
+    "signal": "EXECUTE_BUY",
+    "confidence": "Sentiment 0.75, risk 2.0/10, pattern bullish. All signals align — proceed.",
+    "tokenIn": "ETH",
+    "tokenOut": "USDC",
+    "amountIn": "0.0001 ETH",
+    "amountOut": "0.61 USDC",
+    "txHash": "0x468a8a47ff92d4c93bd315a13c5d26faf19c7fef174247e5134a95755aa684cc",
+    "chain": "Sepolia (11155111)",
+    "routing": "CLASSIC",
+    "status": "success",
+    "explorer": "https://sepolia.etherscan.io/tx/0x468a8a47ff92d4c93bd315a13c5d26faf19c7fef174247e5134a95755aa684cc",
+    "tradeNumber": 3,
+    "maxTrades": 20,
+    "timestamp": 1775354368592
+  }
+]
