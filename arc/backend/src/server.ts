@@ -44,6 +44,7 @@ const MAX_TRADES_PER_SESSION = 20;
 const TRADE_AMOUNT = "100000000000000"; // 0.0001 ETH
 let sessionTradeCount = 0;
 const tradeHistory: any[] = [];
+const decisionHistory: any[] = [];
 const allTimeTradeHistory: any[] = [];
 
 // Load saved trade history on startup
@@ -163,12 +164,12 @@ function getStats() {
   const elapsed = stats.startTime ? (Date.now() - stats.startTime) / 1000 : 0;
   return {
     totalPayments: stats.totalPayments,
-    totalVolume: stats.totalVolume.toFixed(6),
+    totalVolume: stats.totalVolume.toFixed(4),
     paymentsPerMin: elapsed > 0 ? Math.round((stats.totalPayments / elapsed) * 60) : 0,
     dollarsPerSec: elapsed > 0 ? (stats.totalVolume / elapsed).toFixed(4) : "0",
     activeWorkers: stats.activeWorkers,
     gasSaved: (stats.totalPayments * 0.30).toFixed(2),
-    platformFees: stats.totalFees.toFixed(6),
+    platformFees: stats.totalFees.toFixed(4),
     elapsed: Math.round(elapsed),
     isRunning: stats.isRunning,
     totalTrades: stats.totalTrades,
@@ -290,6 +291,7 @@ for (const name of serviceNames) {
       timestamp: Date.now(),
     };
     paymentHistory.push(paymentRecord);
+    if (paymentHistory.length > 1000) paymentHistory.splice(0, paymentHistory.length - 500);
 
     broadcast({ type: "payment", data: paymentRecord });
     broadcast({ type: "stats", data: getStats() });
@@ -323,6 +325,7 @@ app.post("/start", async (_req, res) => {
   stats.totalTrades = 0;
   sessionTradeCount = 0;
   tradeHistory.length = 0;
+  decisionHistory.length = 0;
   tradeLock = false;
   broadcast({ type: "started", data: getStats() });
 
@@ -368,6 +371,8 @@ app.post("/start", async (_req, res) => {
     stats.activeWorkers++;
     broadcast({ type: "worker_joined", data: { name: broker.name, address: privateKeyToAccount(key).address } });
 
+    let cycleIntelligence: { provider: string; insight: string; data: any }[] = [];
+
     for (let c = 0; c < CYCLES; c++) {
       // Pick from this broker's specific providers
       const providerName = broker.providers[Math.floor(Math.random() * broker.providers.length)];
@@ -378,6 +383,9 @@ app.post("/start", async (_req, res) => {
           ? { method: "POST" as const, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: `${broker.name} cycle ${c}` }) }
           : undefined;
         await client.pay(url, opts);
+        // Collect intelligence from this call
+        const svcData = getServiceData(providerName);
+        cycleIntelligence.push({ provider: providerName, insight: svcData.insight, data: svcData.data });
       } catch {}
 
       // Risk manager validates after every 5 calls → if BUY signal, execute Uniswap trade
@@ -388,11 +396,28 @@ app.post("/start", async (_req, res) => {
           await client.pay(rmUrl, { method: "POST" as const, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: `risk-check for ${broker.name}` }) });
         } catch {}
 
-        // Check if signal is BUY and execute trade via Uniswap API
-        const { data: signalData } = getServiceData("summarize");
-        if (signalData.decision === "EXECUTE_BUY" || signalData.decision === "BUY") {
-          await executeUniswapTrade(broker.name, signalData.decision, signalData.summary || "");
+        // Aggregate signal from collected intelligence
+        const cycleSignal = getServiceData("summarize");
+        const decision = {
+          broker: broker.name,
+          profile: broker.profile,
+          cycle: Math.floor(c / 5) + 1,
+          intelligence: cycleIntelligence.slice(-5),
+          signal: cycleSignal.data.decision,
+          confidence: cycleSignal.data.summary,
+          trade: null as any,
+          timestamp: Date.now(),
+        };
+
+        // Execute trade if BUY
+        if (cycleSignal.data.decision === "EXECUTE_BUY") {
+          const trade = await executeUniswapTrade(broker.name, cycleSignal.data.decision, cycleSignal.data.summary || "");
+          if (trade) decision.trade = { txHash: trade.txHash, amountOut: trade.amountOut, explorer: trade.explorer };
         }
+
+        decisionHistory.push(decision);
+        broadcast({ type: "broker_decision", data: decision });
+        cycleIntelligence = [];
       }
 
       await new Promise(r => setTimeout(r, 200 + Math.random() * 400));
@@ -747,6 +772,11 @@ app.post("/cre-run", async (_req, res) => {
 // Trades endpoint — current session
 app.get("/trades", (_req, res) => {
   res.json({ trades: tradeHistory, count: tradeHistory.length, max: MAX_TRADES_PER_SESSION });
+});
+
+// Decisions endpoint — broker intelligence + trade decisions
+app.get("/decisions", (_req, res) => {
+  res.json({ decisions: decisionHistory, count: decisionHistory.length });
 });
 
 // All-time trade history

@@ -11,17 +11,18 @@ import { BountyPanel } from "@/components/bounty-panel";
 const MAX_TRADES = 20;
 
 export function Dashboard() {
-  const { connected, stats, payments, isComplete, connect, disconnect, reset, priceUpdates, trades } = useWebSocket();
+  const { connected, stats, payments, isComplete, connect, disconnect, reset, error, priceUpdates, trades, decisions } = useWebSocket();
   const isRunning = connected && !isComplete;
   const [txCount, setTxCount] = useState("200");
   const [profile, setProfile] = useState("balanced");
-  const [tab, setTab] = useState<"flow" | "calls" | "trades" | "settlement" | "cre" | "ens" | "verify" | "bounty">("flow");
+  const [tab, setTab] = useState<"flow" | "calls" | "decisions" | "trades" | "settlement" | "cre" | "ens" | "verify" | "bounty">("flow");
   const [creLogs, setCreLogs] = useState<any[]>([]);
   const [creResults, setCreResults] = useState<any[]>([]);
   const [gwStatus, setGwStatus] = useState<any>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentEvent | null>(null);
   const [ensPrices, setEnsPrices] = useState<Record<string, string>>({});
   const [backendTrades, setBackendTrades] = useState<any[]>([]);
+  const [backendDecisions, setBackendDecisions] = useState<any[]>([]);
   const [priceAgent, setPriceAgent] = useState("search");
   const [newPrice, setNewPrice] = useState("0.0005");
   const [priceResult, setPriceResult] = useState("");
@@ -56,6 +57,7 @@ export function Dashboard() {
   const TABS = [
     { id: "flow", label: "Flow" },
     { id: "calls", label: "Calls" },
+    { id: "decisions", label: "Decisions" },
     { id: "trades", label: "Trades" },
     { id: "settlement", label: "Settlement" },
     { id: "cre", label: "CRE" },
@@ -65,6 +67,20 @@ export function Dashboard() {
   ] as const;
 
   const gasSavedNum = parseFloat(stats.gasSaved) || 0;
+
+  // Merge WebSocket decisions with backend decisions
+  const allDecisions = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: any[] = [];
+    for (const d of [...decisions, ...backendDecisions]) {
+      const key = `${d.broker}-${d.cycle}-${d.timestamp}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(d);
+      }
+    }
+    return merged.sort((a, b) => b.timestamp - a.timestamp);
+  }, [decisions, backendDecisions]);
 
   // Merge WebSocket trades with backend trades (dedup by txHash)
   const allTrades = useMemo(() => {
@@ -88,16 +104,30 @@ export function Dashboard() {
             <input value={txCount} onChange={e => setTxCount(e.target.value)}
               className="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-center font-mono focus:outline-none focus:ring-2 focus:ring-gray-200" />
           )}
+          {isComplete && !connected && (
+            <button onClick={() => { reset(); setBackendTrades([]); setBackendDecisions([]); }}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
+              Reset
+            </button>
+          )}
           <button onClick={handleStart}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${
               connected
                 ? "bg-red-50 text-red-600 hover:bg-red-100"
                 : "bg-gray-900 text-white hover:bg-gray-800"
             }`}>
-            {connected ? (isComplete ? "Done" : "Stop") : "Start"}
+            {connected ? "Stop" : "Start"}
           </button>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg">
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-xs text-red-700">{error}</span>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-6 gap-3">
@@ -145,6 +175,12 @@ export function Dashboard() {
             }
             if (t.id === "ens") {
               try { setEnsPrices(await (await fetch(api("/prices"))).json()); } catch {}
+            }
+            if (t.id === "decisions") {
+              try {
+                const data = await (await fetch(api("/decisions"))).json();
+                if (data.decisions?.length) setBackendDecisions(data.decisions);
+              } catch {}
             }
             if (t.id === "trades") {
               try {
@@ -369,6 +405,73 @@ export function Dashboard() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Decisions Tab ── */}
+      {tab === "decisions" && (
+        <div className="space-y-3 max-h-[calc(100vh-400px)] overflow-y-auto">
+          {allDecisions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400 text-sm gap-2">
+              <p>Broker decisions appear every 5 intelligence calls</p>
+              <p className="text-[10px]">Each cycle: 5 x402 calls → aggregate intelligence → BUY/HOLD decision → trade if BUY</p>
+            </div>
+          ) : allDecisions.map((d, i) => (
+            <div key={i} className={`border rounded-lg overflow-hidden ${d.signal === "EXECUTE_BUY" ? "border-emerald-200" : "border-gray-200"}`}>
+              {/* Decision Header */}
+              <div className={`px-4 py-2.5 flex items-center justify-between ${d.signal === "EXECUTE_BUY" ? "bg-emerald-50" : "bg-gray-50"}`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-800">{d.broker}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                    d.profile === "Conservative" ? "bg-blue-100 text-blue-600" :
+                    d.profile === "Balanced" ? "bg-green-100 text-green-600" :
+                    d.profile === "Growth" ? "bg-amber-100 text-amber-600" :
+                    "bg-red-100 text-red-600"
+                  }`}>{d.profile}</span>
+                  <span className="text-[10px] text-gray-400">Cycle {d.cycle}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${
+                    d.signal === "EXECUTE_BUY" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
+                  }`}>{d.signal === "EXECUTE_BUY" ? "BUY" : d.signal}</span>
+                  <span className="text-[10px] text-gray-400">{new Date(d.timestamp).toLocaleTimeString()}</span>
+                </div>
+              </div>
+
+              {/* Intelligence Grid */}
+              <div className="px-4 py-3">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-2">Intelligence Collected ({d.intelligence?.length || 0} providers)</p>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                  {(d.intelligence || []).map((intel: any, j: number) => (
+                    <div key={j} className="bg-gray-50 rounded p-2.5 text-[11px]">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold text-gray-700">{providerLabel(intel.provider)}</span>
+                        <span className="text-[9px] text-blue-400 font-mono">{intel.provider}</span>
+                      </div>
+                      <p className="text-gray-600 leading-relaxed">{intel.insight}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Decision + Trade */}
+              <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] text-gray-600">
+                    <span className="font-medium">Decision:</span> {d.confidence}
+                  </div>
+                  {d.trade && (
+                    <a href={d.trade.explorer} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-[10px] text-emerald-600 hover:underline font-mono">
+                      <span className="text-[9px] text-orange-600 border border-orange-200 rounded px-1 bg-orange-50 font-bold">SWAP</span>
+                      {d.trade.amountOut}
+                      <span className="text-blue-500">{d.trade.txHash?.slice(0, 14)}... →</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
