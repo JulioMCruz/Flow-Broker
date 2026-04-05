@@ -45,6 +45,7 @@ export type WSEvent =
   | { type: "cre_result"; data: any }
   | { type: "ens_update"; data: any }
   | { type: "trade"; data: any }
+  | { type: "broker_decision"; data: any }
   | { type: "started"; data: any }
   | { type: "stopped"; data: any };
 
@@ -65,8 +66,10 @@ export function useWebSocket() {
   const [payments, setPayments] = useState<PaymentEvent[]>([]);
   const [workers, setWorkers] = useState<Map<string, WorkerEvent>>(new Map());
   const [isComplete, setIsComplete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [priceUpdates, setPriceUpdates] = useState<{ agent: string; value: string; tx: string; timestamp: number }[]>([]);
   const [trades, setTrades] = useState<any[]>([]);
+  const [decisions, setDecisions] = useState<any[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
@@ -78,6 +81,7 @@ export function useWebSocket() {
     ws.onopen = () => {
       setConnected(true);
       setIsComplete(false);
+      setError(null);
       setPayments([]);
       setStats({
         totalPayments: 0,
@@ -123,6 +127,9 @@ export function useWebSocket() {
         case "cre_complete":
           console.log("%c[CRE] === All Workflows Complete ===", "color: #22c55e; font-weight: bold; font-size: 12px");
           break;
+        case "broker_decision":
+          setDecisions((prev) => [msg.data, ...prev].slice(0, 50));
+          break;
         case "trade":
           setTrades((prev) => [msg.data, ...prev].slice(0, 30));
           console.log(`%c[TRADE] %c${msg.data.broker} %c${msg.data.signal} → ${msg.data.amountIn} → ${msg.data.amountOut} %c${msg.data.txHash?.slice(0,14)}...`, "color: #f59e0b; font-weight: bold", "color: #fff", "color: #22c55e", "color: #3b82f6");
@@ -149,7 +156,7 @@ export function useWebSocket() {
     };
 
     ws.onerror = () => {
-      console.log("🔌 WebSocket error — orchestrator may not be running");
+      setError("Backend not connected — start the server with: PORT=3001 WS_PORT=3002 npm run server");
     };
   }, []);
 
@@ -174,6 +181,7 @@ export function useWebSocket() {
     setIsComplete(false);
     setPriceUpdates([]);
     setTrades([]);
+    setDecisions([]);
   }, []);
 
   // Cleanup on unmount
@@ -192,7 +200,9 @@ export function useWebSocket() {
     connect,
     disconnect,
     reset,
+    error,
     priceUpdates,
     trades,
+    decisions,
   };
 }
