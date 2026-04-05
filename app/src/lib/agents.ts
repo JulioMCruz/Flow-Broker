@@ -1,13 +1,13 @@
 // Broker agents (buyers) — each has a strategy and specific providers it calls
 export const BROKERS = [
-  { id: "guardian", label: "Guardian", profile: "Conservative", providers: ["search"], cost: "~$3/mo", desc: "Market data only", risk: "Low", rep: 4 },
-  { id: "sentinel", label: "Sentinel", profile: "Conservative", providers: ["search", "sentiment"], cost: "~$5/mo", desc: "Market + News sentiment", risk: "Low-Med", rep: 4 },
-  { id: "steady", label: "Steady", profile: "Balanced", providers: ["search", "sentiment", "llm"], cost: "~$10/mo", desc: "Market + Sentiment + AI", risk: "Medium", rep: 5 },
-  { id: "navigator", label: "Navigator", profile: "Balanced", providers: ["search", "sentiment", "llm", "code"], cost: "~$15/mo", desc: "Full analysis + Optimizer", risk: "Medium", rep: 5 },
-  { id: "growth", label: "Growth", profile: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data"], cost: "~$25/mo", desc: "5 intelligence services", risk: "Med-High", rep: 4 },
-  { id: "momentum", label: "Momentum", profile: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data", "translate"], cost: "~$35/mo", desc: "6 services + On-chain", risk: "Med-High", rep: 3 },
-  { id: "apex", label: "Apex", profile: "Alpha", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision"], cost: "~$50/mo", desc: "8 core services", risk: "High", rep: 4 },
-  { id: "titan", label: "Titan", profile: "Alpha", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision", "translate", "summarize"], cost: "~$75/mo", desc: "All 10 services", risk: "High", rep: 5 },
+  { id: "guardian", label: "Guardian", erc8004: "1448", profile: "Conservative", providers: ["search"], cost: "~$3/mo", desc: "Market data only", risk: "Low", rep: 4 },
+  { id: "sentinel", erc8004: "1449", label: "Sentinel", profile: "Conservative", providers: ["search", "sentiment"], cost: "~$5/mo", desc: "Market + News sentiment", risk: "Low-Med", rep: 4 },
+  { id: "steady", erc8004: "1450", label: "Steady", profile: "Balanced", providers: ["search", "sentiment", "llm"], cost: "~$10/mo", desc: "Market + Sentiment + AI", risk: "Medium", rep: 5 },
+  { id: "navigator", erc8004: "1451", label: "Navigator", profile: "Balanced", providers: ["search", "sentiment", "llm", "code"], cost: "~$15/mo", desc: "Full analysis + Optimizer", risk: "Medium", rep: 5 },
+  { id: "growth", erc8004: "1452", label: "Growth", profile: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data"], cost: "~$25/mo", desc: "5 intelligence services", risk: "Med-High", rep: 4 },
+  { id: "momentum", erc8004: "1453", label: "Momentum", profile: "Growth", providers: ["search", "sentiment", "embeddings", "classify", "data", "translate"], cost: "~$35/mo", desc: "6 services + On-chain", risk: "Med-High", rep: 3 },
+  { id: "apex", erc8004: "1454", label: "Apex", profile: "Alpha", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision"], cost: "~$50/mo", desc: "8 core services", risk: "High", rep: 4 },
+  { id: "titan", erc8004: "1455", label: "Titan", profile: "Alpha", providers: ["search", "sentiment", "llm", "embeddings", "classify", "data", "code", "vision", "translate", "summarize"], cost: "~$75/mo", desc: "All 10 services", risk: "High", rep: 5 },
 ];
 
 // Provider agents (sellers) — intelligence services

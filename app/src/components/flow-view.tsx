@@ -86,6 +86,13 @@ export function FlowView({ payments, isRunning, priceUpdates = [] }: FlowViewPro
                 <span className="text-[12px] text-gray-500">{b.cost} · {b.desc}</span>
                 {spent > 0 && <span className="text-[11px] text-red-500 font-mono font-semibold">-${spent.toFixed(6)}</span>}
               </div>
+              {(b as any).erc8004 && (
+                <a href={`https://testnet.arcscan.app/token/0x8004A818BFB912233c491871b3d84c89A494BD9e?a=${(b as any).erc8004}`} target="_blank" rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  className="text-[9px] text-blue-500 hover:underline block mt-0.5">
+                  ERC-8004 identity #{(b as any).erc8004} →
+                </a>
+              )}
             </div>
           ),
         },
