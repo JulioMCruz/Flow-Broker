@@ -574,6 +574,35 @@ app.post("/cre-run", async (_req, res) => {
   res.json({ workflows: results });
 });
 
+// Settlement endpoint — called by CRE Settlement Monitor workflow
+app.post("/settle", async (_req, res) => {
+  const { batchId, paymentCount, totalAmount } = _req.body || {};
+  creLog("settlement-monitor", "INFO", `[CRE] Settlement request received — batch=${batchId}, count=${paymentCount}, amount=${totalAmount}`);
+
+  try {
+    const client = new GatewayClient({ chain: "arcTestnet", privateKey: SELLER_KEY });
+    const balances = await client.getBalances();
+
+    const result = {
+      status: "settlement-recorded",
+      batchId,
+      paymentCount,
+      totalAmount,
+      gatewayBalance: balances.gateway.formattedAvailable,
+      walletBalance: balances.wallet.formatted,
+      timestamp: Date.now(),
+    };
+
+    creLog("settlement-monitor", "INFO", `[CRE] Settlement confirmed — gateway: $${balances.gateway.formattedAvailable} USDC`);
+    broadcast({ type: "cre_result", data: { workflow: "Settlement Monitor", trigger: "CRE Log Trigger", ...result } });
+
+    res.json(result);
+  } catch (e: any) {
+    creLog("settlement-monitor", "ERROR", `Settlement failed: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // STOP endpoint
 app.post("/stop", (_req, res) => {
   stats.isRunning = false;

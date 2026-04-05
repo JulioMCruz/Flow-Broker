@@ -1,5 +1,5 @@
 {
-  "simulatedAt": "2026-04-05T01:55:04Z",
+  "simulatedAt": "2026-04-05T02:08:46Z",
   "creVersion": "v1.9.0",
   "sdkVersion": "@chainlink/cre-sdk@1.5.0",
   "workflows": [
@@ -57,16 +57,23 @@
       "chainWrite": false,
       "contract": "PaymentAccumulator (0x627eE346183AB858c581A8F234ADA37579Ff1b13)",
       "command": "cre workflow simulate settlement-monitor --target staging-settings",
+      "triggerTxHash": "0x3df46a6d0c4f6a4327fb1669def606fb0a2a48315923d6700691a8627a05e88d",
+      "triggerEventIndex": 1,
+      "triggerTxExplorer": "https://testnet.arcscan.app/tx/0x3df46a6d0c4f6a4327fb1669def606fb0a2a48315923d6700691a8627a05e88d",
       "binaryHash": "0587cbb72e6277b4047de7d010499ac4ef58e3c4206468e5e09dbeca976354ee",
       "configHash": "74fda40ad32c7c0db71583d645eca735820c30d5dc769483af3c9cd8005d27fe",
-      "result": "compiled-successfully",
+      "result": "log-trigger-executed",
       "logs": [
-        "[SIMULATION] Compiles successfully",
-        "[SIMULATION] Log Trigger requires interactive TTY input (event tx hash)",
-        "[SIMULATION] Workflow watches PaymentThresholdReached events on PaymentAccumulator"
+        "[SIMULATION] Simulator Initialized",
+        "[SIMULATION] Running trigger trigger=evm:ChainSelector:3034092155422581607@1.0.0",
+        "Found log event at index 1: contract=0x627eE346183AB858c581A8F234ADA37579Ff1b13, topics=2",
+        "Created EVM trigger log for transaction 0x3df46a6d...a05e88d, event 1",
+        "[USER LOG] PaymentThresholdReached — batch=0, count=5, amount=5000000",
+        "[USER LOG] Confirmed batch stats — id=0, count=5, amount=5000000, threshold=5",
+        "HTTP POST to Circle Gateway (facilitator.circle.com/v1/settle) — expected failure in simulation (external API)"
       ],
-      "status": "compiled",
-      "note": "Log Trigger workflows require interactive terminal for simulation (prompts for tx hash)"
+      "status": "success",
+      "note": "Log Trigger + EVM Read work correctly. HTTP call to Circle Gateway fails because facilitator.circle.com is not a real endpoint — in production this would route to Circle's actual settlement API."
     }
   ]
 }

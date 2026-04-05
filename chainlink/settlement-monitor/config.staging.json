@@ -1,6 +1,5 @@
 {
-  "circleGatewayUrl": "https://facilitator.circle.com",
-  "backendSettlementUrl": "https://api.perkmesh.xyz/settle",
+  "backendUrl": "https://api.perkmesh.perkos.xyz",
   "evms": [
     {
       "paymentAccumulatorAddress": "0x627eE346183AB858c581A8F234ADA37579Ff1b13",

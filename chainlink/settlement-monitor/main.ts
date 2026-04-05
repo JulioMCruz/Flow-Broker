@@ -2,10 +2,8 @@
 // PerkMesh — Settlement Monitor CRE Workflow
 // =============================================================================
 // Trigger:  EVM Log — PaymentThresholdReached event from PaymentAccumulator
-// Action:   Read batch stats, call Circle Gateway API for batch settlement
-// Output:   HTTP POST settlement request to PerkMesh backend (which calls
-//           recordBatchSettlement on-chain after Circle Gateway confirms)
-// Bounty:   Chainlink CRE — blockchain event (Arc) + external API (Circle)
+// Action:   Read batch stats on-chain, notify backend to record settlement
+// Output:   HTTP POST to PerkMesh backend /settle endpoint
 // =============================================================================
 
 import {
@@ -41,8 +39,7 @@ type EvmConfig = {
 };
 
 type Config = {
-  circleGatewayUrl: string;
-  backendSettlementUrl: string;
+  backendUrl: string;
   evms: EvmConfig[];
 };
 
@@ -129,22 +126,28 @@ function onPaymentThreshold(runtime: Runtime<Config>, log: EVMLog): string {
     `Confirmed batch stats — id=${batchStats[0]}, count=${batchStats[1]}, amount=${batchStats[2]}, threshold=${batchStats[3]}`
   );
 
-  // 3. HTTP: call Circle Gateway API to trigger batch settlement
+  // 3. HTTP POST: notify backend to record settlement
   const httpClient = new cre.capabilities.HTTPClient();
 
-  const circleResponse = httpClient.sendRequest(
+  const backendResponse = httpClient.sendRequest(
     runtime,
     (sendRequester: HTTPSendRequester) => {
       const payload = JSON.stringify({
         batchId: batchId.toString(),
         paymentCount: count.toString(),
         totalAmount: totalAmount.toString(),
-        chain: "eip155:5042002", // Arc Testnet
+        confirmedOnChain: true,
+        batchStats: {
+          id: batchStats[0].toString(),
+          count: batchStats[1].toString(),
+          amount: batchStats[2].toString(),
+          threshold: batchStats[3].toString(),
+        },
       });
 
       const resp = sendRequester
         .sendRequest({
-          url: `${config.circleGatewayUrl}/v1/settle`,
+          url: `${config.backendUrl}/settle`,
           method: "POST",
           body: Buffer.from(payload).toString("base64"),
           headers: {
@@ -161,41 +164,10 @@ function onPaymentThreshold(runtime: Runtime<Config>, log: EVMLog): string {
   )().result();
 
   runtime.log(
-    `Circle Gateway response: status=${circleResponse.statusCode}`
+    `Backend settlement response: status=${backendResponse.statusCode}`
   );
 
-  // 4. HTTP: notify PerkMesh backend to record settlement on-chain
-  //    Backend will call PaymentAccumulator.recordBatchSettlement(txHash)
-  const backendResponse = httpClient.sendRequest(
-    runtime,
-    (sendRequester: HTTPSendRequester) => {
-      const payload = JSON.stringify({
-        batchId: batchId.toString(),
-        paymentCount: count.toString(),
-        totalAmount: totalAmount.toString(),
-        circleResponse: circleResponse.body,
-      });
-
-      const resp = sendRequester
-        .sendRequest({
-          url: config.backendSettlementUrl,
-          method: "POST",
-          body: Buffer.from(payload).toString("base64"),
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cacheSettings: { store: false, maxAge: "0s" },
-        })
-        .result();
-
-      return resp.statusCode;
-    },
-    consensusIdenticalAggregation<number>()
-  )().result();
-
-  runtime.log(`Backend settlement response: status=${backendResponse}`);
-
-  return `batch-${batchId}-settlement-triggered`;
+  return `batch-${batchId}-settlement-recorded`;
 }
 
 // ---------------------------------------------------------------------------

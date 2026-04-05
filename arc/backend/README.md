@@ -72,7 +72,7 @@ BUYER_KEY=0x...           # buyer wallet (for single agent tests)
 WORKER_1_KEY=0x...        # worker wallets (up to 8)
 ...
 WORKER_8_KEY=0x...
-DEPLOYER_KEY=0x...        # for ENS price changes (Sepolia signer)
+DEPLOYER_KEY=0x...        # contract deployer/owner wallet
 ```
 
 ## Endpoints
@@ -84,7 +84,8 @@ DEPLOYER_KEY=0x...        # for ENS price changes (Sepolia signer)
 | /start | POST | Launch 8 worker agents (body: { cycles, profile }) |
 | /stop | POST | Stop workers |
 | /gateway-status | GET | Circle Gateway balance, batch info, recent payments |
-| /cre-run | POST | Execute CRE workflows |
+| /settle | POST | CRE Settlement Monitor callback — records batch settlement |
+| /cre-run | POST | Execute CRE workflow simulations |
 | /cre-logs | GET | CRE execution logs |
 | /change-price | POST | Update ENS text record on Sepolia |
 | /registry | GET | On-chain agent count from AgentRegistry |
