@@ -17,8 +17,10 @@ graph LR
 
 ## Features
 
-- **Flow View** -- React Flow visualization of broker-to-provider payment edges (animated, thickness = call count)
+- **Flow View** -- React Flow visualization of broker-to-provider payment edges (animated, thickness = call count) + live payment feed side-by-side
 - **Live Payment Feed** -- Click any transaction to see full x402 SDK response (scheme, authorization type, settlement status)
+- **Trades Tab** -- Uniswap swaps executed by brokers: signal, amount, tx hash linked to Sepolia Etherscan
+- **ENS Tab** -- Live text records for all 18 subnames, price change demo
 - **Stats Panel** -- x402 calls, volume, fees (10%), active brokers, gas saved, rate
 - **Settlement Tab** -- Circle Gateway batch status, 5-step lifecycle diagram, gas savings proof
 - **Calls Tab** -- Full payment log with x402 protocol details per transaction
@@ -67,6 +69,7 @@ The dashboard connects to the backend WebSocket and receives:
 | Event | Data | Purpose |
 |-------|------|---------|
 | `payment` | worker, service, amount, scheme, protocol, verified, transaction, fee | Each x402 nanopayment |
+| `trade` | broker, signal, amountIn, amountOut, txHash, explorer, routing, tradeNumber | Uniswap swap executed |
 | `stats` | totalPayments, totalVolume, paymentsPerMin, activeWorkers, gasSaved | Aggregate metrics |
 | `worker_joined` | name, address | Broker started |
 | `worker_finished` | name | Broker completed all cycles |
