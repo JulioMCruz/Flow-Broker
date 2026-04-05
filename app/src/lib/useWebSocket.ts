@@ -148,6 +148,16 @@ export function useWebSocket() {
             return next;
           });
           break;
+        case "reset":
+          // New session started — clear all state
+          setPayments([]);
+          setTrades([]);
+          setDecisions([]);
+          setPriceUpdates([]);
+          setWorkers(new Map());
+          setIsComplete(false);
+          setError(null);
+          break;
         case "complete":
           setStats(msg.data);
           setIsComplete(true);
