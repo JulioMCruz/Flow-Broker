@@ -112,7 +112,7 @@ function onPriceUpdate(runtime: Runtime<Config>): string {
       return parsed.ethereum.usd;
     },
     consensusIdenticalAggregation<number>()
-  )(config).result();
+  )().result();
 
   runtime.log(`ETH/USD price: $${priceData}`);
 
@@ -138,7 +138,7 @@ function onPriceUpdate(runtime: Runtime<Config>): string {
     isTestnet: true,
   });
   const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector
+    network!.chainSelector.selector
   );
 
   const reportResponse = runtime
@@ -159,7 +159,7 @@ function onPriceUpdate(runtime: Runtime<Config>): string {
     .result();
 
   if (writeResult.txStatus === TxStatus.SUCCESS) {
-    const txHash = bytesToHex(writeResult.txHash);
+    const txHash = bytesToHex(writeResult.txHash!);
     runtime.log(`PricingOracle updated — tx: ${txHash}`);
     return `prices-updated-tx-${txHash}`;
   }

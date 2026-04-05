@@ -101,7 +101,7 @@ function onPaymentThreshold(runtime: Runtime<Config>, log: EVMLog): string {
     isTestnet: true,
   });
   const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector
+    network!.chainSelector.selector
   );
 
   const callData = encodeFunctionData({
@@ -158,7 +158,7 @@ function onPaymentThreshold(runtime: Runtime<Config>, log: EVMLog): string {
       return { statusCode: resp.statusCode, body: bodyText };
     },
     consensusIdenticalAggregation<{ statusCode: number; body: string }>()
-  )(config).result();
+  )().result();
 
   runtime.log(
     `Circle Gateway response: status=${circleResponse.statusCode}`
@@ -191,7 +191,7 @@ function onPaymentThreshold(runtime: Runtime<Config>, log: EVMLog): string {
       return resp.statusCode;
     },
     consensusIdenticalAggregation<number>()
-  )(config).result();
+  )().result();
 
   runtime.log(`Backend settlement response: status=${backendResponse}`);
 
@@ -209,7 +209,7 @@ const initWorkflow = (config: Config) => {
     isTestnet: true,
   });
   const evmClient = new cre.capabilities.EVMClient(
-    network.chainSelector.selector
+    network!.chainSelector.selector
   );
 
   return [

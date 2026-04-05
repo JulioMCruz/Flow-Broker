@@ -1,0 +1,72 @@
+{
+  "simulatedAt": "2026-04-05T01:55:04Z",
+  "creVersion": "v1.9.0",
+  "sdkVersion": "@chainlink/cre-sdk@1.5.0",
+  "workflows": [
+    {
+      "name": "Agent Health Monitor",
+      "directory": "agent-health-monitor",
+      "trigger": "cron (every 5 min)",
+      "capabilities": ["HTTP Client"],
+      "chainWrite": false,
+      "contract": "AgentRegistry (0xE9bFA497e189272109540f9dBA4cb1419F05cdF0)",
+      "command": "cre workflow simulate agent-health-monitor --target staging-settings",
+      "binaryHash": "2e7b41e805b6824a02d2863023c5e3b771284dad3f5b0e5818ab79262f26f6a5",
+      "configHash": "b60b54dd244b55f6e6cd2e0619bfb94547ace6a91e2510bac9134b9f1457bf24",
+      "result": "1-agents-down",
+      "logs": [
+        "[SIMULATION] Simulator Initialized",
+        "[SIMULATION] Running trigger trigger=cron-trigger@1.0.0",
+        "[USER LOG] Agent \"httpbin-test\" (id=0) is DOWN (status: 404)",
+        "[USER LOG] Health check complete: 0 healthy, 1 down",
+        "[USER LOG] Down agents: httpbin-test",
+        "Workflow Simulation Result: \"1-agents-down\"",
+        "[SIMULATION] Execution finished signal received"
+      ],
+      "status": "success"
+    },
+    {
+      "name": "Dynamic Pricing Oracle",
+      "directory": "dynamic-pricing",
+      "trigger": "cron (every 30 min)",
+      "capabilities": ["HTTP Client", "EVM Write (writeReport)"],
+      "chainWrite": true,
+      "contract": "PricingOracle (0xdF5e936A36A190859C799754AAC848D9f5Abf958)",
+      "command": "cre workflow simulate dynamic-pricing --target staging-settings --broadcast",
+      "binaryHash": "4703ad7902ff7a37d84f1ed3d9e7ed4d8fce1abaffd3cf29cc099888d18d9337",
+      "configHash": "f4b171136d492264126c3cc0a8565fa7f47c3e83590c30ba67195619c182124e",
+      "result": "prices-updated-tx-0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14",
+      "txHash": "0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14",
+      "txExplorer": "https://testnet.arcscan.app/tx/0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14",
+      "logs": [
+        "[SIMULATION] Simulator Initialized",
+        "[SIMULATION] Running trigger trigger=cron-trigger@1.0.0",
+        "[USER LOG] ETH/USD price: $2065.01",
+        "[USER LOG] Calculated prices for 10 agents: [100, 803, 30, 140, 135, 50, 50, 602, 331, 140]",
+        "[USER LOG] PricingOracle updated — tx: 0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14",
+        "Workflow Simulation Result: \"prices-updated-tx-0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14\"",
+        "[SIMULATION] Execution finished signal received"
+      ],
+      "status": "success"
+    },
+    {
+      "name": "Settlement Monitor",
+      "directory": "settlement-monitor",
+      "trigger": "EVM Log (PaymentThresholdReached event)",
+      "capabilities": ["EVM Read (callContract)", "HTTP Client"],
+      "chainWrite": false,
+      "contract": "PaymentAccumulator (0x627eE346183AB858c581A8F234ADA37579Ff1b13)",
+      "command": "cre workflow simulate settlement-monitor --target staging-settings",
+      "binaryHash": "0587cbb72e6277b4047de7d010499ac4ef58e3c4206468e5e09dbeca976354ee",
+      "configHash": "74fda40ad32c7c0db71583d645eca735820c30d5dc769483af3c9cd8005d27fe",
+      "result": "compiled-successfully",
+      "logs": [
+        "[SIMULATION] Compiles successfully",
+        "[SIMULATION] Log Trigger requires interactive TTY input (event tx hash)",
+        "[SIMULATION] Workflow watches PaymentThresholdReached events on PaymentAccumulator"
+      ],
+      "status": "compiled",
+      "note": "Log Trigger workflows require interactive terminal for simulation (prompts for tx hash)"
+    }
+  ]
+}

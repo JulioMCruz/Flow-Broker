@@ -1,3 +1,19 @@
 name: settlement-monitor
 files:
   - main.ts
+
+staging-settings:
+  user-workflow:
+    workflow-name: "settlement-monitor-staging"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: ""
+
+production-settings:
+  user-workflow:
+    workflow-name: "settlement-monitor-production"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.staging.json"
+    secrets-path: ""
