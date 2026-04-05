@@ -70,6 +70,10 @@ web_modules/
 .env.*
 !.env.example
 
+# Runtime data files (local vs server)
+trade-history.json
+simulation-results.json
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
