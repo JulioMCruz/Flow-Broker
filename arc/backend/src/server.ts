@@ -420,7 +420,10 @@ app.post("/start", async (_req, res) => {
   sessionTradeCount = 0;
   tradeHistory.length = 0;
   decisionHistory.length = 0;
+  creLogs.length = 0;
+  coordinationLog.length = 0;
   tradeQueue = Promise.resolve();
+  broadcast({ type: "reset", data: {} });
   broadcast({ type: "started", data: getStats() });
 
   const NUM_WORKERS = 8;
