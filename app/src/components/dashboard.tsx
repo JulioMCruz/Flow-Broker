@@ -25,6 +25,7 @@ export function Dashboard() {
   const [ensPrices, setEnsPrices] = useState<Record<string, string>>({});
   const [backendTrades, setBackendTrades] = useState<any[]>([]);
   const [backendDecisions, setBackendDecisions] = useState<any[]>([]);
+  const [brokerFilter, setBrokerFilter] = useState<string>("all");
   const [priceAgent, setPriceAgent] = useState("search");
   const [newPrice, setNewPrice] = useState("0.0005");
   const [priceResult, setPriceResult] = useState("");
@@ -69,6 +70,18 @@ export function Dashboard() {
   ] as const;
 
   const gasSavedNum = parseFloat(stats.gasSaved) || 0;
+
+  // Get unique broker names for filter
+  const brokerNames = useMemo(() => {
+    const names = new Set<string>();
+    [...decisions, ...backendDecisions].forEach(d => { if (d.broker) names.add(d.broker); });
+    return Array.from(names).sort();
+  }, [decisions, backendDecisions]);
+
+  const filteredDecisions = useMemo(() => {
+    if (brokerFilter === "all") return allDecisions;
+    return allDecisions.filter(d => d.broker === brokerFilter);
+  }, [allDecisions, brokerFilter]);
 
   // Merge WebSocket decisions with backend decisions
   const allDecisions = useMemo(() => {
@@ -406,13 +419,29 @@ export function Dashboard() {
 
       {/* ── Decisions Tab ── */}
       {tab === "decisions" && (
-        <div className="space-y-3 max-h-[calc(100vh-400px)] overflow-y-auto">
-          {allDecisions.length === 0 ? (
+        <div className="space-y-3">
+          {/* Broker filter */}
+          {brokerNames.length > 0 && (
+            <div className="flex gap-1 flex-wrap">
+              <button onClick={() => setBrokerFilter("all")}
+                className={`px-2 py-1 rounded text-xs ${brokerFilter === "all" ? "bg-gray-900 text-white" : "border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                All ({allDecisions.length})
+              </button>
+              {brokerNames.map(name => (
+                <button key={name} onClick={() => setBrokerFilter(name)}
+                  className={`px-2 py-1 rounded text-xs ${brokerFilter === name ? "bg-gray-900 text-white" : "border border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  {name} ({allDecisions.filter(d => d.broker === name).length})
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="space-y-3 max-h-[calc(100vh-460px)] overflow-y-auto">
+          {filteredDecisions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-gray-400 text-sm gap-2">
               <p>Broker decisions appear every 5 intelligence calls</p>
               <p className="text-[10px]">Each cycle: 5 x402 calls → aggregate intelligence → BUY/HOLD decision → trade if BUY</p>
             </div>
-          ) : allDecisions.map((d, i) => (
+          ) : filteredDecisions.map((d, i) => (
             <div key={i} className={`border rounded-lg overflow-hidden ${d.signal === "EXECUTE_BUY" ? "border-emerald-200" : "border-gray-200"}`}>
               {/* Decision Header */}
               <div className={`px-4 py-2.5 flex items-center justify-between ${d.signal === "EXECUTE_BUY" ? "bg-emerald-50" : "bg-gray-50"}`}>
@@ -468,6 +497,8 @@ export function Dashboard() {
               </div>
             </div>
           ))}
+        </div>
+          </div>
         </div>
       )}
 
