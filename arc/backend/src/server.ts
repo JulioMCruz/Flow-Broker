@@ -41,6 +41,8 @@ const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 const MAX_TRADES_PER_SESSION = 20;
 const TRADE_AMOUNT = "100000000000000"; // 0.0001 ETH in wei
 let sessionTradeCount = 0;
+let currentSessionId = `session-${Date.now()}`;
+let sessionNumber = 0;
 
 // Sepolia token addresses
 const TOKENS = {
@@ -192,6 +194,7 @@ async function _doTrade(brokerName: string, signal: string, confidence: string) 
     stats.totalTrades++;
 
     const trade = {
+      session: currentSessionId,
       broker: brokerName,
       signal,
       confidence,
@@ -418,11 +421,15 @@ app.post("/start", async (_req, res) => {
   stats.totalVolume = 0;
   stats.totalTrades = 0;
   sessionTradeCount = 0;
-  tradeHistory.length = 0;
+  // Keep trade/decision history — tagged by session
+  // tradeHistory.length = 0; (disabled — use sessions instead)
   decisionHistory.length = 0;
   creLogs.length = 0;
   coordinationLog.length = 0;
   tradeQueue = Promise.resolve();
+  sessionNumber++;
+  currentSessionId = `session-${sessionNumber}-${new Date().toISOString().slice(11,19)}`;
+  console.log(`[session] Started session ${currentSessionId}`);
   broadcast({ type: "reset", data: {} });
   broadcast({ type: "started", data: getStats() });
 
@@ -867,6 +874,16 @@ app.post("/cre-run", async (_req, res) => {
 });
 
 // Trades endpoint — current session
+app.get("/sessions", (_req, res) => {
+  const sessions: Record<string, any[]> = {};
+  for (const t of allTimeTradeHistory) {
+    const sid = t.session || "legacy";
+    if (!sessions[sid]) sessions[sid] = [];
+    sessions[sid].push(t);
+  }
+  res.json({ sessions, currentSession: currentSessionId, totalSessions: sessionNumber });
+});
+
 app.get("/trades", (_req, res) => {
   res.json({ trades: tradeHistory, count: tradeHistory.length, max: MAX_TRADES_PER_SESSION });
 });
