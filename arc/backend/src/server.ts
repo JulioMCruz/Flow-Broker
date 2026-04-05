@@ -38,11 +38,72 @@ let stats = {
 const UNISWAP_API_KEY = process.env.UNISWAP_API_KEY || "";
 const UNISWAP_URL = "https://trade-api.gateway.uniswap.org/v1";
 const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
-const NATIVE_ETH = "0x0000000000000000000000000000000000000000";
-const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const MAX_TRADES_PER_SESSION = 20;
-const TRADE_AMOUNT = "100000000000000"; // 0.0001 ETH
+const TRADE_AMOUNT = "100000000000000"; // 0.0001 ETH in wei
 let sessionTradeCount = 0;
+
+// Sepolia token addresses
+const TOKENS = {
+  ETH:  "0x0000000000000000000000000000000000000000",
+  WETH: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+  USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  UNI:  "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+  DAI:  "0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357",
+} as const;
+type TokenSymbol = keyof typeof TOKENS;
+
+// Each broker has a trading strategy — different tokens based on their risk profile
+const BROKER_STRATEGIES: Record<string, { signal: string; tokenIn: TokenSymbol; tokenOut: TokenSymbol; reason: string }[]> = {
+  "Guardian":  [
+    { signal: "BUY",         tokenIn: "ETH",  tokenOut: "USDC", reason: "capital preservation — move to stablecoin" },
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "USDC", reason: "conservative exit to stable" },
+  ],
+  "Sentinel":  [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "USDC", reason: "hedging to stable on signal" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "moderate buy back into ETH" },
+  ],
+  "Steady":    [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "USDC", reason: "balanced exit" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "balanced re-entry" },
+  ],
+  "Navigator": [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "growth play — buying UNI governance token" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "standard ETH buy" },
+  ],
+  "Growth":    [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "high conviction — UNI exposure" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "UNI",  reason: "accumulate UNI on signal" },
+  ],
+  "Momentum":  [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "momentum trade — trend following" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "WETH", reason: "ride the trend" },
+  ],
+  "Apex":      [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "aggressive — UNI exposure" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "UNI",  reason: "alpha seeking" },
+  ],
+  "Titan":     [
+    { signal: "EXECUTE_BUY", tokenIn: "ETH",  tokenOut: "UNI",  reason: "full alpha — max conviction UNI trade" },
+    { signal: "BUY",         tokenIn: "USDC", tokenOut: "UNI",  reason: "maximum exposure play" },
+  ],
+};
+
+function getBrokerTrade(brokerName: string, signal: string): { tokenIn: TokenSymbol; tokenOut: TokenSymbol; reason: string } | null {
+  const strategies = BROKER_STRATEGIES[brokerName];
+  if (!strategies) return { tokenIn: "ETH", tokenOut: "USDC", reason: "default swap" };
+  const match = strategies.find(s => s.signal === signal);
+  return match || strategies[0] || null;
+}
+
+// Map token symbol to decimals and display
+const TOKEN_DECIMALS: Record<TokenSymbol, number> = { ETH: 18, WETH: 18, USDC: 6, UNI: 18, DAI: 18 };
+const TOKEN_AMOUNT: Record<TokenSymbol, string> = {
+  ETH:  "100000000000000",     // 0.0001 ETH
+  WETH: "100000000000000",     // 0.0001 WETH
+  USDC: "100000",              // 0.1 USDC
+  UNI:  "100000000000000",     // 0.0001 UNI
+  DAI:  "100000000000000000",  // 0.1 DAI
+};
 const tradeHistory: any[] = [];
 const decisionHistory: any[] = [];
 const allTimeTradeHistory: any[] = [];
@@ -72,23 +133,36 @@ async function _doTrade(brokerName: string, signal: string, confidence: string) 
   const traderKey = process.env.DEPLOYER_KEY as `0x${string}`;
   if (!traderKey) return null;
 
+  // Get broker-specific trading strategy
+  const strategy = getBrokerTrade(brokerName, signal);
+  if (!strategy) return null;
+
+  const { tokenIn, tokenOut, reason } = strategy;
+  const tokenInAddr = TOKENS[tokenIn];
+  const tokenOutAddr = TOKENS[tokenOut];
+  const amountIn = TOKEN_AMOUNT[tokenIn];
+  const outDecimals = TOKEN_DECIMALS[tokenOut];
+
   try {
     const traderAddress = privateKeyToAccount(traderKey).address;
 
-    // 1. Quote
+    // 1. Quote — use Uniswap Routing API for best price
     const quoteRes = await fetch(`${UNISWAP_URL}/quote`, {
       method: "POST",
       headers: { "x-api-key": UNISWAP_API_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        tokenIn: NATIVE_ETH, tokenOut: USDC_SEPOLIA,
+        tokenIn: tokenInAddr, tokenOut: tokenOutAddr,
         tokenInChainId: 11155111, tokenOutChainId: 11155111,
-        amount: TRADE_AMOUNT, type: "EXACT_INPUT",
-        swapper: traderAddress, slippageTolerance: 1.0,
+        amount: amountIn, type: "EXACT_INPUT",
+        swapper: traderAddress, slippageTolerance: 1.5,
+        routingPreference: "BEST_PRICE",
       }),
     });
-    if (!quoteRes.ok) return null;
+    if (!quoteRes.ok) { console.log(`[trade] ${brokerName}: quote failed — ${await quoteRes.text()}`); return null; }
     const quoteData = await quoteRes.json();
-    const usdcOut = (parseInt(quoteData.quote.output.amount) / 1e6).toFixed(2);
+    const amountOut = (parseInt(quoteData.quote?.output?.amount || "0") / Math.pow(10, outDecimals)).toFixed(6);
+    const route = quoteData.routing || "CLASSIC";
+    const usdcOut = amountOut; // reusing variable name for compatibility
 
     // 2. Get swap tx
     const swapRes = await fetch(`${UNISWAP_URL}/swap`, {
@@ -121,13 +195,14 @@ async function _doTrade(brokerName: string, signal: string, confidence: string) 
       broker: brokerName,
       signal,
       confidence,
-      tokenIn: "ETH",
-      tokenOut: "USDC",
-      amountIn: "0.0001 ETH",
-      amountOut: `${usdcOut} USDC`,
+      strategy: reason,
+      tokenIn,
+      tokenOut,
+      amountIn: `${parseFloat(amountIn) / Math.pow(10, TOKEN_DECIMALS[tokenIn])} ${tokenIn}`,
+      amountOut: `${usdcOut} ${tokenOut}`,
       txHash: hash,
       chain: "Sepolia (11155111)",
-      routing: quoteData.routing,
+      routing: route,
       status: receipt.status === "success" ? "success" : "failed",
       explorer: `https://sepolia.etherscan.io/tx/${hash}`,
       tradeNumber: sessionTradeCount,
@@ -139,7 +214,7 @@ async function _doTrade(brokerName: string, signal: string, confidence: string) 
     allTimeTradeHistory.push(trade);
     try { writeFileSync("trade-history.json", JSON.stringify(allTimeTradeHistory, null, 2)); } catch {}
     broadcast({ type: "trade", data: trade });
-    console.log(`[trade] ${brokerName}: ${signal} → swapped 0.001 ETH → ${usdcOut} USDC (${sessionTradeCount}/${MAX_TRADES_PER_SESSION}) tx: ${hash.slice(0, 14)}...`);
+    console.log(`[trade] ${brokerName}: ${signal} → ${tokenIn}→${tokenOut} ${usdcOut} ${tokenOut} (${reason} (${sessionTradeCount}/${MAX_TRADES_PER_SESSION}) tx: ${hash.slice(0, 14)}...`);
 
     return trade;
   } catch (e: any) {
@@ -405,7 +480,7 @@ app.post("/start", async (_req, res) => {
         const cycleSignal = getServiceData("summarize");
         const decision = {
           broker: broker.name,
-          profile: broker.profile,
+
           cycle: Math.floor(c / 5) + 1,
           intelligence: cycleIntelligence.slice(-5),
           signal: cycleSignal.data.decision,
@@ -816,6 +891,35 @@ app.post("/settle", async (_req, res) => {
     creLog("settlement-monitor", "ERROR", `Settlement failed: ${e.message}`);
     res.status(500).json({ error: e.message });
   }
+});
+
+// Recent activations (user paid to activate a broker)
+const recentActivations: any[] = [];
+
+app.post("/activate", (req, res) => {
+  const { broker, txHash, userAddress } = req.body;
+  if (!broker || !txHash) return res.status(400).json({ error: "missing broker or txHash" });
+
+  const activation = {
+    broker,
+    userAddress: userAddress || "unknown",
+    txHash,
+    timestamp: Date.now(),
+    arcScan: `https://testnet.arcscan.app/tx/${txHash}`,
+  };
+
+  recentActivations.unshift(activation);
+  if (recentActivations.length > 20) recentActivations.pop();
+
+  // Broadcast to dashboard
+  broadcast({ type: "activation", data: activation });
+
+  console.log(`[activation] ${broker} activated by ${userAddress?.slice(0, 10)}... tx: ${txHash.slice(0, 14)}...`);
+  res.json({ success: true, activation });
+});
+
+app.get("/activations", (_req, res) => {
+  res.json({ activations: recentActivations.slice(0, 5) });
 });
 
 // STOP endpoint
