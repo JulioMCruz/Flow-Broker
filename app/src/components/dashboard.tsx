@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { PaymentEvent } from "@/lib/useWebSocket";
 import { useWebSocket } from "@/lib/useWebSocket";
 import { api } from "@/lib/api";
@@ -21,6 +21,7 @@ export function Dashboard() {
   const [gwStatus, setGwStatus] = useState<any>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentEvent | null>(null);
   const [ensPrices, setEnsPrices] = useState<Record<string, string>>({});
+  const [backendTrades, setBackendTrades] = useState<any[]>([]);
   const [priceAgent, setPriceAgent] = useState("search");
   const [newPrice, setNewPrice] = useState("0.0005");
   const [priceResult, setPriceResult] = useState("");
@@ -65,6 +66,19 @@ export function Dashboard() {
 
   const gasSavedNum = parseFloat(stats.gasSaved) || 0;
 
+  // Merge WebSocket trades with backend trades (dedup by txHash)
+  const allTrades = useMemo(() => {
+    const seen = new Set<string>();
+    const merged: any[] = [];
+    for (const t of [...trades, ...backendTrades]) {
+      if (t.txHash && !seen.has(t.txHash)) {
+        seen.add(t.txHash);
+        merged.push(t);
+      }
+    }
+    return merged.sort((a, b) => b.timestamp - a.timestamp);
+  }, [trades, backendTrades]);
+
   return (
     <div className="w-full max-w-[1600px] mx-auto px-6 py-5 space-y-5">
       {/* Controls */}
@@ -92,7 +106,7 @@ export function Dashboard() {
           { l: "VOLUME", v: `$${stats.totalVolume}`, color: "text-blue-600" },
           { l: "FEES (10%)", v: `$${stats.platformFees || "0"}`, color: "text-amber-600" },
           { l: "BROKERS", v: String(stats.activeWorkers), color: "text-gray-900" },
-          { l: "TRADES", v: `${(stats as any).totalTrades || trades.length}/${MAX_TRADES}`, color: "text-orange-600" },
+          { l: "TRADES", v: `${allTrades.length}/${MAX_TRADES}`, color: "text-orange-600" },
           { l: "GAS SAVED", v: `$${stats.gasSaved}`, color: "text-emerald-600" },
         ].map(s => (
           <div key={s.l} className="bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
@@ -131,6 +145,12 @@ export function Dashboard() {
             }
             if (t.id === "ens") {
               try { setEnsPrices(await (await fetch(api("/prices"))).json()); } catch {}
+            }
+            if (t.id === "trades") {
+              try {
+                const data = await (await fetch(api("/trades"))).json();
+                if (data.trades?.length) setBackendTrades(data.trades);
+              } catch {}
             }
             if (t.id === "cre") {
               try {
@@ -380,7 +400,7 @@ export function Dashboard() {
                 <p>Real tx on Sepolia</p>
               </div>
             </div>
-            <p className="text-[9px] text-orange-600 mt-2">Max {MAX_TRADES} trades per session. Each trade: 0.001 ETH → USDC via Uniswap V3 on Sepolia.</p>
+            <p className="text-[9px] text-orange-600 mt-2">Max {MAX_TRADES} trades per session. Each trade: 0.0001 ETH → USDC via Uniswap V3 on Sepolia.</p>
           </div>
 
           {/* Trade list */}
@@ -390,15 +410,15 @@ export function Dashboard() {
                 <p className="text-xs font-medium text-gray-700">Uniswap Trades</p>
                 <span className="text-[9px] text-orange-600 border border-orange-200 rounded px-1.5 py-0.5 bg-orange-50 font-semibold">Sepolia</span>
               </div>
-              <span className="text-[10px] text-gray-400 font-mono">{trades.length}/{MAX_TRADES} trades</span>
+              <span className="text-[10px] text-gray-400 font-mono">{allTrades.length}/{MAX_TRADES} trades</span>
             </div>
             <div className="divide-y divide-gray-50 max-h-[500px] overflow-y-auto">
-              {trades.length === 0 ? (
+              {allTrades.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-48 text-gray-400 text-sm gap-2">
                   <p>Trades appear when brokers receive BUY signals</p>
                   <p className="text-[10px]">Every 5 intelligence calls → risk check → if BUY → Uniswap swap</p>
                 </div>
-              ) : trades.map((t, i) => (
+              ) : allTrades.map((t, i) => (
                 <div key={i} className="px-4 py-3">
                   <div className="flex items-center gap-3 text-xs">
                     <span className="text-[10px] text-gray-300 w-16">{new Date(t.timestamp).toLocaleTimeString()}</span>
