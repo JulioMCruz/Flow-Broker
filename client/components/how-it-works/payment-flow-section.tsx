@@ -12,53 +12,60 @@ import {
   FileText,
   ChevronDown,
   ClipboardList,
+  Search,
+  TrendingUp,
 } from "lucide-react"
 
 const flowSteps = [
   {
     icon: ClipboardList,
     title: "Complete your risk profile quiz",
-    description: "Answer 5 questions to determine your investment style",
+    description: "Answer 5 questions to determine your investment style — conservative to alpha",
   },
   {
     icon: User,
     title: "Choose your broker agent",
-    description: "Select conservative, balanced, or alpha based on your risk profile",
+    description: "Get matched to one of 8 brokers (Guardian to Titan), each with different intelligence providers and trading strategies",
   },
   {
     icon: Wallet,
-    title: "Fund wallet with USDC",
-    description: "Connect your wallet and deposit USDC to activate your agent",
-  },
-  {
-    icon: CreditCard,
-    title: "Agent pays per call via Arc x402",
-    description: "Gas-free, USDC micropayments from $0.000002 to $0.015",
-  },
-  {
-    icon: Database,
-    title: "PaymentAccumulator.sol logs payments",
-    description: "Every payment recorded on-chain for transparency",
+    title: "Deposit USDC on Arc Testnet",
+    description: "Connect your wallet and deposit USDC to activate your broker agent",
   },
   {
     icon: Settings,
-    title: "Chainlink CRE orchestrates",
-    description: "Health check, pricing update, batch settlement automatically",
+    title: "Chainlink CRE orchestrates the agents",
+    description: "CRE runs continuously: Health Monitor pings agents every 5 min, Dynamic Pricing fetches ETH/USD and updates provider prices via ENS every 30 min, Settlement Monitor tracks Circle Gateway batches",
+  },
+  {
+    icon: CreditCard,
+    title: "Broker buys intelligence via x402 nanopayments",
+    description: "Your broker pays 10 specialized providers per call — market data ($0.000002), sentiment ($0.0003), AI analysis ($0.015). All gas-free via Circle Gateway. Prices come from ENS, set by CRE",
+  },
+  {
+    icon: Search,
+    title: "Providers return financial intelligence",
+    description: "Market prices, sentiment scores, chart patterns, risk calculations, portfolio optimization — each provider returns specialized data",
   },
   {
     icon: Brain,
-    title: "Agent makes decision",
-    description: "Based on intelligence gathered within your risk limits",
+    title: "Broker aggregates signals and decides",
+    description: "Every 5 intelligence calls, broker runs a risk check. If all signals align — BUY. If not — HOLD. Different brokers have different risk thresholds",
   },
   {
-    icon: ArrowRight,
-    title: "Trade executed",
-    description: "Within your pre-defined risk parameters",
+    icon: TrendingUp,
+    title: "Trade executed on Uniswap",
+    description: "On BUY signal, broker calls Uniswap Trading API on Sepolia — gets a quote, builds the swap, signs and broadcasts. Conservative brokers swap ETH→USDC, aggressive brokers swap ETH→UNI",
+  },
+  {
+    icon: Database,
+    title: "Everything verifiable on-chain",
+    description: "x402 payments batched by Circle Gateway on Arc. Uniswap trades on Sepolia Etherscan. Agent prices on ENS (flowbroker.eth). All with real transaction hashes",
   },
   {
     icon: FileText,
-    title: "Report generated",
-    description: "Decision summary sent to your dashboard",
+    title: "Dashboard shows everything live",
+    description: "Real-time flow visualization, payment feed, broker decisions with AI reasoning, Uniswap trade history, and CRE workflow logs — all updating via WebSocket",
   },
 ]
 
@@ -71,7 +78,7 @@ export function PaymentFlowSection() {
             The payment <span className="font-serif italic text-primary">flow</span>
           </h2>
           <p className="mt-4 text-muted-foreground font-light">
-            From quiz to trade execution in 9 steps
+            From quiz to Uniswap trade in 10 steps
           </p>
         </div>
 
