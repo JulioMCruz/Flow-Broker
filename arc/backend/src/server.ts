@@ -55,12 +55,19 @@ try {
   console.log(`[trades] Loaded ${saved.length} historical trades`);
 } catch { /* no history yet */ }
 
-let tradeLock = false;
+let tradeQueue: Promise<any> = Promise.resolve();
 async function executeUniswapTrade(brokerName: string, signal: string, confidence: string) {
   if (!UNISWAP_API_KEY || sessionTradeCount >= MAX_TRADES_PER_SESSION) return null;
   if (signal !== "BUY" && signal !== "EXECUTE_BUY") return null;
-  if (tradeLock) return null;
-  tradeLock = true;
+
+  // Queue trades sequentially (one at a time, but none are dropped)
+  const myTrade = tradeQueue.then(() => _doTrade(brokerName, signal, confidence));
+  tradeQueue = myTrade.catch(() => {});
+  return myTrade;
+}
+
+async function _doTrade(brokerName: string, signal: string, confidence: string) {
+  if (sessionTradeCount >= MAX_TRADES_PER_SESSION) return null;
 
   const traderKey = process.env.DEPLOYER_KEY as `0x${string}`;
   if (!traderKey) return null;
@@ -134,11 +141,9 @@ async function executeUniswapTrade(brokerName: string, signal: string, confidenc
     broadcast({ type: "trade", data: trade });
     console.log(`[trade] ${brokerName}: ${signal} → swapped 0.001 ETH → ${usdcOut} USDC (${sessionTradeCount}/${MAX_TRADES_PER_SESSION}) tx: ${hash.slice(0, 14)}...`);
 
-    tradeLock = false;
     return trade;
   } catch (e: any) {
     console.log(`[trade] ${brokerName}: swap failed — ${e.message}`);
-    tradeLock = false;
     return null;
   }
 }
@@ -326,7 +331,7 @@ app.post("/start", async (_req, res) => {
   sessionTradeCount = 0;
   tradeHistory.length = 0;
   decisionHistory.length = 0;
-  tradeLock = false;
+  tradeQueue = Promise.resolve();
   broadcast({ type: "started", data: getStats() });
 
   const NUM_WORKERS = 8;

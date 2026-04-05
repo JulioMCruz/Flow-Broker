@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 # Netlify build artifacts
 client/.netlify/
 .netlify/
+arc/backend/trade-history.json
