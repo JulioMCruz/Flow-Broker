@@ -2,6 +2,51 @@
 
 3 CRE workflows that orchestrate the Flow Broker agent economy. Built with TypeScript SDK, compiled to WASM, simulated on CRE CLI v1.9.0.
 
+## How CRE orchestrates the agents
+
+```mermaid
+graph LR
+    subgraph CRE Workflows
+        HM[Health Monitor<br/>cron 5min]
+        DP[Dynamic Pricing<br/>cron 30min]
+        SM[Settlement Monitor<br/>log trigger]
+    end
+
+    subgraph External
+        CG[CoinGecko API]
+    end
+
+    subgraph On-Chain - Arc Testnet
+        PO[PricingOracle]
+        PA[PaymentAccumulator]
+        AR[AgentRegistry]
+    end
+
+    subgraph Backend
+        BE[Express API]
+        ENS[flowbroker.eth<br/>Sepolia]
+    end
+
+    subgraph Agents
+        BR[8 Brokers]
+        PR[10 Providers]
+    end
+
+    HM -->|HTTP ping| PR
+    HM -->|mark down| AR
+
+    DP -->|fetch ETH/USD| CG
+    DP -->|writeReport| PO
+    DP -->|POST /update-prices| BE
+    BE -->|setText| ENS
+    ENS -->|read prices| BR
+    BR -->|x402 pay| PR
+
+    PA -->|PaymentThresholdReached| SM
+    SM -->|callContract read| PA
+    SM -->|POST /settle| BE
+```
+
 ## Prerequisites
 
 ```bash
@@ -39,9 +84,15 @@ cd .. && cre workflow simulate agent-health-monitor --target staging-settings
 - **Trigger:** Cron (every 30 min)
 - **Capabilities:** HTTP Client + EVM Write (writeReport via KeystoneForwarder)
 - **Chain Write:** YES
-- **What:** Fetches ETH/USD from CoinGecko, calculates fair prices, writes batch update to PricingOracle contract
+- **What:** Fetches ETH/USD from CoinGecko, calculates fair prices, writes to PricingOracle on-chain, then calls backend `/update-prices` to update ENS text records so agents read the new prices within 30s
 - **Contract:** PricingOracle (`0xdF5e936A36A190859C799754AAC848D9f5Abf958`)
 - **Formula:** `finalPrice = basePrice x costMultiplier x (1 + clamp((ethPrice - 2000) / 20000, -0.5, 0.5))`
+- **Full orchestration loop:**
+  ```
+  CRE cron → Fetch ETH/USD → Calculate prices → Write PricingOracle (on-chain)
+    → POST /update-prices → Backend updates ENS text records (Sepolia)
+    → Agents read new prices from ENS (every 30s) → Brokers pay updated x402 prices
+  ```
 
 ```bash
 cd chainlink/dynamic-pricing && bun install
@@ -49,12 +100,12 @@ cd chainlink/dynamic-pricing && bun install
 # Dry-run simulation
 cd .. && cre workflow simulate dynamic-pricing --target staging-settings
 
-# With actual on-chain write (requires CRE_ETH_PRIVATE_KEY in chainlink/.env)
+# With actual on-chain write + ENS update (requires CRE_ETH_PRIVATE_KEY in chainlink/.env)
 cre workflow simulate dynamic-pricing --target staging-settings --broadcast
 ```
 
-**Verified result:** `"prices-updated-tx-0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14"`
-**Verify on ArcScan:** https://testnet.arcscan.app/tx/0x2b2e9dbfa3dae182843aa82ec591794d93094c521d7b307f855a8d8d0ba89c14
+**Verified result:** `"prices-updated-tx-0xb5c5730003a493945ab53ccee8f21f3835f51b4f2cc47c2e9ad91cb8f503b5c1"`
+**Verify on ArcScan:** https://testnet.arcscan.app/tx/0xb5c5730003a493945ab53ccee8f21f3835f51b4f2cc47c2e9ad91cb8f503b5c1
 
 ### 3. Settlement Monitor
 - **Trigger:** EVM Log (PaymentThresholdReached event on PaymentAccumulator)

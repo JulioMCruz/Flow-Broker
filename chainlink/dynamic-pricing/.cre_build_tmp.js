@@ -16728,6 +16728,10 @@ function calculatePrices(agents, ethPriceUsd) {
     return BigInt(Math.max(1, adjusted));
   });
 }
+function atomicToUsd(atomic) {
+  const n = Number(atomic) / 1e6;
+  return n.toFixed(6);
+}
 function onPriceUpdate(runtime2) {
   const config = runtime2.config;
   const httpClient = new cre.capabilities.HTTPClient;
@@ -16764,13 +16768,35 @@ function onPriceUpdate(runtime2) {
     report: reportResponse,
     gasConfig: { gasLimit: config.evms[0].gasLimit }
   }).result();
-  if (writeResult.txStatus === TxStatus.SUCCESS) {
-    const txHash = bytesToHex(writeResult.txHash);
-    runtime2.log(`PricingOracle updated — tx: ${txHash}`);
-    return `prices-updated-tx-${txHash}`;
+  if (writeResult.txStatus !== TxStatus.SUCCESS) {
+    runtime2.log("Failed to update PricingOracle");
+    return "price-update-failed";
   }
-  runtime2.log("Failed to update PricingOracle");
-  return "price-update-failed";
+  const txHash = bytesToHex(writeResult.txHash);
+  runtime2.log(`PricingOracle updated on-chain — tx: ${txHash}`);
+  const priceUpdates = config.agents.map((agent, idx) => ({
+    agent: agent.name,
+    price: atomicToUsd(newPrices[idx])
+  }));
+  const ensResult = httpClient.sendRequest(runtime2, (sendRequester) => {
+    const payload = JSON.stringify({
+      prices: priceUpdates,
+      ethPrice: priceData,
+      txHash
+    });
+    const resp = sendRequester.sendRequest({
+      url: `${config.backendUrl}/update-prices`,
+      method: "POST",
+      body: Buffer.from(payload).toString("base64"),
+      headers: { "Content-Type": "application/json" },
+      cacheSettings: { store: false, maxAge: "0s" }
+    }).result();
+    const bodyText = new TextDecoder().decode(resp.body);
+    return { statusCode: resp.statusCode, body: bodyText };
+  }, consensusIdenticalAggregation())().result();
+  runtime2.log(`ENS batch update response: status=${ensResult.statusCode}`);
+  runtime2.log(`Updated ${config.agents.length} agent prices via ENS`);
+  return `prices-updated-tx-${txHash}`;
 }
 var initWorkflow = (config) => {
   const cron = new cre.capabilities.CronCapability;

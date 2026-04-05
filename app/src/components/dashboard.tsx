@@ -9,7 +9,7 @@ import { FlowView } from "@/components/flow-view";
 import { BountyPanel } from "@/components/bounty-panel";
 
 export function Dashboard() {
-  const { connected, stats, payments, isComplete, connect, disconnect, reset } = useWebSocket();
+  const { connected, stats, payments, isComplete, connect, disconnect, reset, priceUpdates } = useWebSocket();
   const isRunning = connected && !isComplete;
   const [txCount, setTxCount] = useState("200");
   const [profile, setProfile] = useState("balanced");
@@ -144,11 +144,25 @@ export function Dashboard() {
       {/* ── Flow Tab ── */}
       {tab === "flow" && (
         <div className="space-y-3">
+          {/* CRE Price Update Banner */}
+          {priceUpdates.length > 0 && (Date.now() - priceUpdates[0].timestamp < 30000) && (
+            <div className="flex items-center gap-3 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg animate-pulse">
+              <span className="text-[10px] font-semibold text-purple-700 border border-purple-300 rounded px-1.5 py-0.5 bg-white">CRE</span>
+              <span className="text-xs text-purple-800 font-medium">Dynamic Pricing Update</span>
+              <span className="text-[10px] text-purple-600 font-mono">{priceUpdates[0].agent} → ${priceUpdates[0].value}</span>
+              <span className="text-[10px] text-purple-400">{priceUpdates.length} agents updated</span>
+              {priceUpdates[0].tx && (
+                <a href={`https://sepolia.etherscan.io/tx/${priceUpdates[0].tx}`} target="_blank" rel="noopener noreferrer"
+                  className="text-[10px] text-purple-500 hover:underline ml-auto">tx →</a>
+              )}
+            </div>
+          )}
+
           {/* Side by side: Flow graph + Payment log */}
           <div className="flex gap-4" style={{ height: "calc(100vh - 520px)", minHeight: "400px" }}>
             {/* Left: Flow visualization */}
             <div className="flex-1 min-w-0">
-              <FlowView payments={payments} isRunning={isRunning} />
+              <FlowView payments={payments} isRunning={isRunning} priceUpdates={priceUpdates} />
             </div>
 
             {/* Right: Payment feed + detail */}

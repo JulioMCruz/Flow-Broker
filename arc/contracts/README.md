@@ -2,6 +2,34 @@
 
 5 Solidity contracts deployed on Arc Testnet. Built with Foundry + OpenZeppelin.
 
+## Contract Interactions
+
+```mermaid
+graph TB
+    subgraph Contracts
+        AR[AgentRegistry<br/>agent metadata + reputation]
+        AC[AgenticCommerce<br/>ERC-8183 job escrow]
+        PA[PaymentAccumulator<br/>x402 tracking + threshold events]
+        PO[PricingOracle<br/>dynamic prices from CRE]
+        RH[ReputationHook<br/>ERC-8183 hook]
+    end
+
+    subgraph External
+        CRE[Chainlink CRE]
+        KF[KeystoneForwarder]
+        BE[Backend]
+    end
+
+    CRE -->|writeReport| KF
+    KF -->|onReport| PO
+    KF -->|onReport| AR
+    BE -->|recordPayment| PA
+    PA -->|PaymentThresholdReached| CRE
+    AC -->|afterAction| RH
+    RH -->|incrementCompleted| AR
+    AC -->|safeTransfer USDC| AC
+```
+
 ## Contracts
 
 ### AgentRegistry

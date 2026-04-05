@@ -2,6 +2,19 @@
 
 Next.js app that visualizes the agent economy in real-time. Shows 8 broker agents buying intelligence from 10 providers via x402 nanopayments.
 
+## Data Flow
+
+```mermaid
+graph LR
+    BE[Backend API] -->|WebSocket| WS[useWebSocket Hook]
+    WS -->|payments| FV[Flow View<br/>React Flow]
+    WS -->|payments| PF[Payment Feed<br/>click for x402 detail]
+    WS -->|stats| SP[Stats Panel<br/>6 KPIs]
+    WS -->|cre_log| CRE[CRE Tab<br/>workflow logs]
+    WS -->|ens_update| ENS[ENS price updates]
+    BE -->|GET /gateway-status| ST[Settlement Tab<br/>batch proof]
+```
+
 ## Features
 
 - **Flow View** -- React Flow visualization of broker-to-provider payment edges (animated, thickness = call count)

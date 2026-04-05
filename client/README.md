@@ -2,6 +2,22 @@
 
 Next.js landing page for Flow Broker. Users take a quiz, get matched to a broker, and activate it with USDC.
 
+## User Journey
+
+```mermaid
+graph LR
+    A[Landing Page] -->|CTA| B[Find Your Broker]
+    B -->|5 questions| C{Quiz Score}
+    C -->|<= 20%| G[Guardian]
+    C -->|<= 45%| S[Steady]
+    C -->|<= 75%| M[Momentum]
+    C -->|> 87%| T[Titan]
+    G & S & M & T -->|select| D[Activate Page]
+    D -->|connect wallet| E[RainbowKit]
+    E -->|deposit USDC| F[Arc Testnet]
+    F -->|success| H[Dashboard]
+```
+
 ## User Flow
 
 1. **Landing** (`/`) -- Hero, how it works, pricing, comparison sections
