@@ -4,36 +4,48 @@ Autonomous AI Broker on Arc. 8 broker agents buy financial intelligence from 10 
 
 ## Architecture
 
+### 1. User Flow
+
 ```mermaid
-graph TB
-    subgraph User Flow
-        U[User] -->|1. Quiz| C[Client App]
-        C -->|2. Deposit USDC| ARC[Arc Testnet]
-        C -->|3. View activity| D[Dashboard]
+graph LR
+    U[User] -->|Quiz| C[Client App]
+    C -->|Broker match| A[Activate]
+    A -->|Deposit USDC| ARC[Arc Testnet]
+    ARC -->|View activity| D[Dashboard]
+```
+
+### 2. Agent Economy (x402 + Uniswap)
+
+```mermaid
+graph LR
+    subgraph Brokers
+        B1[Guardian] & B2[Sentinel] & B3[Steady] & B4[Titan]
     end
 
-    subgraph Agent Economy
-        B1[Guardian] & B2[Sentinel] & B3[Steady] & B4[Navigator] & B5[Growth] & B6[Momentum] & B7[Apex] & B8[Titan]
-        P1[Market Data] & P2[Sentiment] & P3[LLM] & P4[Embeddings] & P5[Classify] & P6[On-chain] & P7[Macro] & P8[Portfolio] & P9[Execution] & P10[Reports]
-        B1 & B2 & B3 & B4 & B5 & B6 & B7 & B8 -->|x402 nanopayment| P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 & P9 & P10
+    subgraph Providers
+        P1[Market Data] & P2[Sentiment] & P3[LLM] & P4[...7 more]
     end
 
-    subgraph Chainlink CRE Orchestration
-        CRE1[Health Monitor] -->|every 5min| BE[Backend API]
-        CRE2[Dynamic Pricing] -->|every 30min| PO[PricingOracle]
-        CRE2 -->|update prices| BE
-        BE -->|update| ENS[flowbroker.eth]
-        CRE3[Settlement Monitor] -->|on threshold event| PA[PaymentAccumulator]
-        CRE3 -->|notify| BE
-    end
+    B1 & B2 & B3 & B4 -->|x402 nanopayment| P1 & P2 & P3 & P4
+    P1 & P2 & P3 & P4 -->|intelligence data| B1 & B2 & B3 & B4
+    B1 & B2 & B3 & B4 -->|BUY signal| UNI[Uniswap API]
+    UNI -->|swap ETH→USDC| SEP[Sepolia]
+    P1 & P2 -->|accumulate| GW[Circle Gateway]
+    GW -->|batch settle 1 tx| ARC[Arc Testnet]
+```
 
-    subgraph Settlement
-        P1 & P2 & P3 -->|accumulate| GW[Circle Gateway]
-        GW -->|batch settle| ARC
-    end
+### 3. Orchestration (CRE + ENS)
 
-    ENS -->|price discovery| B1 & B2 & B3
-    BE -->|WebSocket| D
+```mermaid
+graph LR
+    CRE1[Health Monitor] -->|ping agents| BE[Backend]
+    CRE2[Dynamic Pricing] -->|ETH/USD| PO[PricingOracle]
+    CRE2 -->|update prices| BE
+    BE -->|setText| ENS[flowbroker.eth]
+    ENS -->|price discovery| BR[Brokers]
+    CRE3[Settlement Monitor] -->|log trigger| PA[PaymentAccumulator]
+    CRE3 -->|notify| BE
+    BE -->|WebSocket| DASH[Dashboard]
 ```
 
 ## Live
@@ -52,7 +64,8 @@ graph TB
 3. Broker autonomously buys financial intelligence from 10 providers via x402 nanopayments
 4. Each call: buyer signs EIP-3009 authorization (gas-free) -> seller verifies -> data returned
 5. Circle Gateway batches all signed authorizations -> settles as 1 on-chain tx
-6. Chainlink CRE orchestrates the agent economy:
+6. Every 5 intelligence calls, broker checks signal: if BUY -> executes swap via Uniswap API on Sepolia (max 20 trades/session)
+7. Chainlink CRE orchestrates the agent economy:
    - Health Monitor (5min): pings agent endpoints, detects downtime
    - Dynamic Pricing (30min): fetches ETH/USD -> calculates prices -> writes PricingOracle on-chain -> updates ENS text records -> agents read new prices
    - Settlement Monitor: detects batch threshold events on-chain -> confirms stats -> notifies backend
@@ -175,8 +188,18 @@ Environment files needed:
 ## Tech Stack
 
 - **Payments:** Circle x402 Gateway SDK (`@circle-fin/x402-batching`)
+- **Trading:** Uniswap Trading API (Sepolia) — brokers execute swaps based on intelligence signals
 - **Contracts:** Solidity, Foundry, OpenZeppelin (Arc Testnet)
 - **Backend:** TypeScript, Express, viem, WebSocket
 - **Frontend:** Next.js 16, React 19, React Flow, RainbowKit, wagmi, Tailwind CSS
 - **Automation:** Chainlink CRE (TypeScript SDK -> WASM)
 - **Identity:** ENS (Sepolia), ERC-8183 (Agentic Commerce Protocol)
+
+## Bounties
+
+| Bounty | Integration |
+|--------|-------------|
+| **Arc x402** ($6K) | 8 brokers making hundreds of x402 nanopayments to 10 providers, Circle Gateway batch settlement |
+| **ENS** ($5K) | flowbroker.eth with 18 subnames, live text records for price discovery, CRE updates ENS prices |
+| **Chainlink CRE** ($4K) | 3 workflows: health monitor, dynamic pricing (EVM Write), settlement monitor (Log Trigger) |
+| **Uniswap API** ($10K) | Brokers execute real swaps on Sepolia when BUY signal received, max 20 trades/session |

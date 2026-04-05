@@ -126,6 +126,7 @@ DEPLOYER_KEY=0x...        # contract deployer/owner wallet
 | /gateway-status | GET | Circle Gateway balance, batch info, recent payments |
 | /settle | POST | CRE Settlement Monitor callback — records batch settlement |
 | /update-prices | POST | CRE Dynamic Pricing callback — batch updates ENS text records |
+| /trades | GET | List Uniswap trades executed by brokers (max 20/session) |
 | /cre-run | POST | Execute CRE workflow simulations |
 | /cre-logs | GET | CRE execution logs |
 | /change-price | POST | Update ENS text record on Sepolia |
@@ -141,6 +142,38 @@ npm run buyer         # Single buyer agent
 npm run orchestrator  # 8 workers + WebSocket
 npm run jobs          # ERC-8183 job lifecycle demo
 ```
+
+## Uniswap API Trading
+
+Brokers execute real swaps on Sepolia testnet via the Uniswap Trading API when they receive a BUY signal from intelligence providers.
+
+```mermaid
+sequenceDiagram
+    participant B as Broker Agent
+    participant P as Intelligence Providers
+    participant RM as Risk Manager (LLM)
+    participant U as Uniswap API
+    participant S as Sepolia
+
+    B->>P: 5 x402 intelligence calls (Arc)
+    P-->>B: Market data, sentiment, analysis
+    B->>RM: Risk check — aggregate signals
+    RM-->>B: BUY signal, 85% confidence
+    B->>U: POST /quote (0.001 ETH → USDC)
+    U-->>B: Quote: 6.09 USDC, route: CLASSIC
+    B->>U: POST /swap (get unsigned tx)
+    U-->>B: Transaction calldata
+    B->>S: Sign + broadcast tx
+    S-->>B: TX confirmed
+    B->>Dashboard: Broadcast trade event (WebSocket)
+```
+
+- **API:** `https://trade-api.gateway.uniswap.org/v1`
+- **Chain:** Sepolia (11155111)
+- **Pair:** ETH → USDC (0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238)
+- **Amount:** 0.001 ETH per trade
+- **Max:** 20 trades per session
+- **Trigger:** Every 5 intelligence calls, if BUY signal
 
 ## Key Addresses
 
