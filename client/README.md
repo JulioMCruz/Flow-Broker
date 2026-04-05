@@ -1,82 +1,60 @@
-# Client
+# Client App — User Onboarding
 
-Next.js landing page for Flow Broker. Users take a quiz, get matched to a broker, and activate it with USDC.
+Landing page, broker quiz, and USDC payment flow. Users discover which broker fits their risk profile and deposit USDC to activate it.
 
-## User Journey
+## User flow
 
 ```mermaid
 graph LR
-    A[Landing Page] -->|CTA| B[Find Your Broker]
-    B -->|5 questions| C{Quiz Score}
-    C -->|<= 20%| G[Guardian]
-    C -->|<= 45%| S[Steady]
-    C -->|<= 75%| M[Momentum]
-    C -->|> 87%| T[Titan]
-    G & S & M & T -->|select| D[Activate Page]
-    D -->|connect wallet| E[RainbowKit]
-    E -->|deposit USDC| F[Arc Testnet]
-    F -->|success| H[Dashboard]
+    A[Landing] --> B[Find Your Broker quiz]
+    B -->|5 questions| C[Broker recommended]
+    C --> D[/activate/steady]
+    D -->|Connect MetaMask| E[Arc Testnet]
+    E -->|Pay USDC| F[Broker wallet]
+    F -->|POST /activate| G[Backend notified]
+    G -->|WebSocket broadcast| H[Dashboard shows activation]
+    H --> I[View Live Dashboard]
 ```
 
-## User Flow
+## What happens after payment
 
-1. **Landing** (`/`) -- Hero, how it works, pricing, comparison sections
-2. **Find Your Broker** (`/find-your-broker`) -- 5-question risk profile quiz
-3. **Results** -- Shows matched broker with cost, services, risk level + compare all 8
-4. **Activate** (`/activate/[broker]`) -- Deposit USDC to broker wallet on Arc Testnet
-5. **Dashboard** -- Links to live dashboard (configurable via env)
+When a user pays, the client sends the transaction hash to the backend (`POST /activate`). The dashboard receives a WebSocket event and shows the activation in the "Recent Activations" panel — connecting the two apps in real time.
 
-## Quiz Scoring
+## Broker profiles
 
-5 questions, 3 options each (score 1-3). Total score mapped to broker:
-- <=20%: Guardian | <=30%: Sentinel | <=45%: Steady | <=55%: Navigator
-- <=65%: Growth | <=75%: Momentum | <=87%: Apex | >87%: Titan
+8 brokers, matched to user answers:
 
-## Wallet Activation
+| Broker | Profile | Monthly cost | Risk |
+|--------|---------|-------------|------|
+| Guardian | Conservative | ~$3 | Low |
+| Sentinel | Conservative | ~$5 | Low |
+| Steady | Balanced | ~$10 | Medium |
+| Navigator | Balanced | ~$15 | Medium |
+| Growth | Growth | ~$25 | Med-High |
+| Momentum | Growth | ~$35 | Med-High |
+| Apex | Alpha | ~$50 | High |
+| Titan | Alpha | ~$75 | High |
 
-- Uses wagmi + RainbowKit for wallet connection
-- Transfers USDC to broker-specific wallet on Arc Testnet (chain ID 5042002)
-- Each broker has its own deposit address (hardcoded in `wallet-activation.tsx`)
-- USDC contract: `0x3600000000000000000000000000000000000000`
+All broker metadata (APY, risk, cost, providers) is stored in ENS text records on `flowbroker.eth` and read at runtime.
 
-## Run
+## Wallet integration
+
+Uses RainbowKit + wagmi configured for Arc Testnet (chain ID 5042002). The payment calls `transfer(address, uint256)` on USDC (`0x3600...`) to the broker's wallet on Arc.
+
+```bash
+# Add Arc Testnet to MetaMask
+Chain ID: 5042002
+RPC: https://rpc.testnet.arc.network
+Symbol: USDC
+Explorer: https://testnet.arcscan.app
+```
+
+## Run locally
 
 ```bash
 cd client
 npm install
-npm run dev
+
+# Uses Reown WalletConnect
+NEXT_PUBLIC_WC_PROJECT_ID=a439946a4066ac956330bf09c0080f0c npm run dev
 ```
-
-## Environment
-
-```bash
-# client/.env.local (all optional -- has fallbacks)
-NEXT_PUBLIC_DASHBOARD_URL=http://localhost:3005           # or https://flowbroker-app.netlify.app
-NEXT_PUBLIC_WC_PROJECT_ID=your_walletconnect_project_id   # fallback hardcoded
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3001              # for embedded dashboard
-NEXT_PUBLIC_WS_URL=ws://localhost:3002                     # for embedded dashboard
-```
-
-## Pages
-
-| Route | Component | Purpose |
-|-------|-----------|---------|
-| `/` | Landing sections | Marketing funnel |
-| `/find-your-broker` | Quiz + Results | Risk profile -> broker match |
-| `/how-it-works` | Info page | Step-by-step explanation |
-| `/activate/[broker]` | Deposit form | USDC payment to activate broker |
-| `/dashboard` | Embedded dashboard | Real-time agent activity |
-
-## Tech
-
-- Next.js 16, React 19, Tailwind CSS, shadcn/ui
-- wagmi + RainbowKit (wallet connection)
-- viem (Arc Testnet chain definition)
-
-## Deploy
-
-Netlify with `@netlify/plugin-nextjs`. Static export.
-
-## Live
-
-https://flowbroker.netlify.app

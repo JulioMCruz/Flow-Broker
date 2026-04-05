@@ -1,102 +1,52 @@
-# Dashboard
+# Dashboard App
 
-Next.js app that visualizes the agent economy in real-time. Shows 8 broker agents buying intelligence from 10 providers via x402 nanopayments.
+Real-time visualization of the agent economy. Shows 8 brokers buying intelligence from 10 providers, executing Uniswap trades, and coordinating through the network.
 
-## Data Flow
+## What you see
 
 ```mermaid
 graph LR
-    BE[Backend API] -->|WebSocket| WS[useWebSocket Hook]
-    WS -->|payments| FV[Flow View<br/>React Flow]
-    WS -->|payments| PF[Payment Feed<br/>click for x402 detail]
-    WS -->|stats| SP[Stats Panel<br/>6 KPIs]
-    WS -->|cre_log| CRE[CRE Tab<br/>workflow logs]
-    WS -->|ens_update| ENS[ENS price updates]
-    BE -->|GET /gateway-status| ST[Settlement Tab<br/>batch proof]
+    BE[Backend API] -->|WebSocket| WS[useWebSocket hook]
+    WS -->|payments| FV[Flow tab<br/>React Flow graph]
+    WS -->|payments| CF[Calls tab<br/>x402 payment log]
+    WS -->|decisions| DT[Decisions tab<br/>AI reasoning trail]
+    WS -->|trades| TR[Trades tab<br/>Uniswap swaps]
+    WS -->|coordination| FV
+    BE -->|REST| ST[Settlement tab<br/>Gateway batch proof]
+    BE -->|REST| CRE[CRE tab<br/>workflow logs]
+    BE -->|REST| EN[ENS tab<br/>live price changes]
 ```
 
-## Features
+## Tabs
 
-- **Flow View** -- React Flow visualization of broker-to-provider payment edges (animated, thickness = call count) + live payment feed side-by-side
-- **Live Payment Feed** -- Click any transaction to see full x402 SDK response (scheme, authorization type, settlement status)
-- **Trades Tab** -- Uniswap swaps executed by brokers: signal, amount, tx hash linked to Sepolia Etherscan
-- **ENS Tab** -- Live text records for all 18 subnames, price change demo
-- **Stats Panel** -- x402 calls, volume, fees (10%), active brokers, gas saved, rate
-- **Settlement Tab** -- Circle Gateway batch status, 5-step lifecycle diagram, gas savings proof
-- **Calls Tab** -- Full payment log with x402 protocol details per transaction
-- **CRE Tab** -- Chainlink workflow execution results and logs
-- **Verify Tab** -- On-chain contract addresses with ArcScan links, ENS info
-- **Protocols Tab** -- x402, ENS, and CRE integration details with live demos
+**Flow** — React Flow graph. Broker nodes (red) on the left, provider nodes (green) on the right. Animated edges appear as brokers pay providers. ERC-8004 identity link on each broker node.
 
-## x402 Payment Details Shown
+**Calls** — Every x402 payment logged in real time. Click any row to see the full Circle Gateway response: scheme, authorization type, network, settlement status.
 
-Each transaction shows:
-- `scheme: GatewayWalletBatched`
-- `authorization: EIP-3009 TransferWithAuthorization`
-- `network: eip155:5042002`
-- `settled_on_chain: false` (in batch, pending Circle settlement)
-- `gas_cost_for_buyer: $0.00` (gas-free signatures)
-- Gateway reference (NOT an on-chain tx hash)
-- Link to payer wallet on ArcScan
+**Decisions** — AI reasoning trail. Shows what intelligence each broker collected and what decision it made before trading.
 
-## Run
+**Trades** — Uniswap swaps. Each entry shows tokenIn, tokenOut, routing strategy, and Sepolia Etherscan link. Different brokers use different token pairs based on their risk profile.
+
+**Settlement** — Circle Gateway batch status. Shows how individual nanopayments accumulate into single onchain transactions. Displays gas savings.
+
+**CRE** — Chainlink workflow execution logs. Click to run all 3 workflows and see real simulation output.
+
+**ENS** — Live price change demo. Update a provider price in ENS, watch brokers adapt.
+
+**Protocols** — Technical details for Arc, ENS, and Chainlink — with live demos embedded.
+
+## Run locally
 
 ```bash
 cd app
 npm install
-cp .env.example .env.local
-PORT=3005 npm run dev
+
+# Create .env.local
+echo "NEXT_PUBLIC_WS_URL=wss://api.perkmesh.perkos.xyz/ws" > .env.local
+echo "NEXT_PUBLIC_BACKEND_URL=https://api.perkmesh.perkos.xyz" >> .env.local
+
+npm run dev
+# Opens at http://localhost:3000
 ```
 
-## Environment
-
-```bash
-# app/.env.local
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3001    # backend API
-NEXT_PUBLIC_WS_URL=ws://localhost:3002           # WebSocket for live updates
-```
-
-For production (connects to VPS):
-```bash
-NEXT_PUBLIC_BACKEND_URL=https://api.perkmesh.perkos.xyz
-NEXT_PUBLIC_WS_URL=wss://api.perkmesh.perkos.xyz/ws
-```
-
-## WebSocket Events
-
-The dashboard connects to the backend WebSocket and receives:
-
-| Event | Data | Purpose |
-|-------|------|---------|
-| `payment` | worker, service, amount, scheme, protocol, verified, transaction, fee | Each x402 nanopayment |
-| `trade` | broker, signal, amountIn, amountOut, txHash, explorer, routing, tradeNumber | Uniswap swap executed |
-| `stats` | totalPayments, totalVolume, paymentsPerMin, activeWorkers, gasSaved | Aggregate metrics |
-| `worker_joined` | name, address | Broker started |
-| `worker_finished` | name | Broker completed all cycles |
-| `complete` | final stats | All workers done |
-| `cre_log` | workflow, level, message | CRE workflow logs |
-| `ens_update` | agent, value, tx | ENS price change |
-
-## Components
-
-| Component | File | Purpose |
-|-----------|------|---------|
-| Dashboard | `src/components/dashboard.tsx` | Main layout, tabs, stats, controls |
-| FlowView | `src/components/flow-view.tsx` | React Flow broker-to-provider visualization |
-| BountyPanel | `src/components/bounty-panel.tsx` | Protocol integration details (x402, ENS, CRE) |
-| useWebSocket | `src/lib/useWebSocket.ts` | WebSocket connection, state management |
-| agents | `src/lib/agents.ts` | Broker/provider definitions, address mapping |
-
-## Tech
-
-- Next.js 16, React 19, @xyflow/react, Tailwind CSS
-- RainbowKit + wagmi (wallet connection in header)
-- WebSocket for real-time updates
-
-## Deploy
-
-Netlify with `@netlify/plugin-nextjs`.
-
-## Live
-
-https://flowbroker-app.netlify.app
+The dashboard connects to the production backend — no local server needed.

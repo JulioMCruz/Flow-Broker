@@ -1,87 +1,60 @@
-# ENS Integration
+# ENS — Agent Discovery via flowbroker.eth
 
-Flow Broker uses **flowbroker.eth** (Sepolia) as the agent service mesh for dynamic discovery and pricing.
+Brokers discover providers through ENS, not hardcoded URLs. Every provider has a subname under `flowbroker.eth` with text records storing its price, capabilities, and status. Change a text record and brokers adapt within 30 seconds.
 
-## Price Discovery Flow
+## How we use ENS
 
 ```mermaid
 sequenceDiagram
-    participant CRE as Chainlink CRE
-    participant BE as Backend
-    participant ENS as flowbroker.eth (Sepolia)
-    participant Broker as Broker Agent
+    participant Broker
+    participant ENS as ENS (Sepolia)
+    participant Provider
 
-    Note over CRE: Every 30 min
-    CRE->>BE: POST /update-prices (10 agents)
-    BE->>ENS: setText("com.x402.price", "0.001")
-    Note over BE: Repeat for each agent
-
-    Note over Broker: Every 30s
     Broker->>ENS: getEnsText("market-data.flowbroker.eth", "com.x402.price")
-    ENS-->>Broker: "0.001"
-    Broker->>Broker: Use price for next x402 call
+    ENS-->>Broker: "$0.000002"
+    Broker->>ENS: getEnsText("market-data.flowbroker.eth", "com.agent.status")
+    ENS-->>Broker: "active"
+    Note over Broker: Price from ENS — not hardcoded
+    Broker->>Provider: Pays $0.000002 via x402
+    Provider-->>Broker: Market data returned
 ```
 
-## Domain
+## What's registered
 
-[flowbroker.eth on ENS](https://sepolia.app.ens.domains/flowbroker.eth)
+**flowbroker.eth** on Sepolia — 18 subnames total.
 
-## Subnames (18 total)
+```mermaid
+graph TD
+    FB[flowbroker.eth] --> B1[guardian.flowbroker.eth]
+    FB --> B2[sentinel.flowbroker.eth]
+    FB --> B3[steady.flowbroker.eth]
+    FB --> B4[..."8 brokers total"]
+    FB --> P1[market-data.flowbroker.eth]
+    FB --> P2[ai-analysis.flowbroker.eth]
+    FB --> P3[sentiment.flowbroker.eth]
+    FB --> P4[..."10 providers total"]
 
-### 8 Broker Agents
-guardian, sentinel, steady, navigator, growth, momentum, apex, titan
+    P1 -->|com.x402.price| PR1["$0.000002/call"]
+    P2 -->|com.x402.price| PR2["$0.015/call"]
+    P1 -->|com.agent.capabilities| CAP1["price,volume,volatility"]
+```
 
-### 10 Information Providers
-market-data, ai-analysis, sentiment, classifier, portfolio-data, embeddings, translator, summarizer, chart-analyzer, compute
+## Text records per agent
 
-## Text Records per Subname
+| Key | Example value | Used for |
+|-----|--------------|---------|
+| `com.x402.price` | `0.000002` | What brokers pay per call |
+| `com.agent.capabilities` | `price,volume,volatility` | What the provider returns |
+| `com.agent.type` | `provider` | broker or provider |
+| `com.agent.status` | `active` | Skip if inactive |
+| `com.broker.apy` | `9.3%` | Displayed on activate page |
+| `com.broker.risk` | `Med-High` | Risk profile |
 
-| Key | Example | Purpose |
-|-----|---------|---------|
-| `com.x402.price` | "0.001" | Price per call in USDC |
-| `com.agent.capabilities` | "Real-time prices" | Service description |
-| `com.agent.type` | "provider" or "broker" | Agent role |
-| `com.agent.status` | "active" | Current availability |
-| `com.agent.providers` | "search,sentiment,llm" | Broker's provider list |
+## Live price change demo
 
-### Broker-specific records
-| Key | Purpose |
-|-----|---------|
-| `com.broker.profile` | Conservative / Balanced / Growth / Alpha |
-| `com.broker.cost` | Monthly cost estimate |
-| `com.broker.risk` | Risk level |
-| `com.broker.strategy` | Trading strategy description |
+The ENS tab in the dashboard lets you update a provider price in real time. The transaction writes to Sepolia, and the broker reads the new price on its next cycle.
 
-## How it works
-
-1. Backend calls `discoverAgents()` on startup -- resolves all 18 subnames from Sepolia ENS
-2. Extracts prices from `com.x402.price` text records
-3. Refreshes every 30 seconds
-4. If ENS is unavailable, falls back to hardcoded prices
-5. When ENS price changes, agents pay the new price within 30s
-
-## ENS -> Backend Endpoint Mapping
-
-| ENS Subname | Backend Endpoint |
-|-------------|-----------------|
-| market-data.flowbroker.eth | /api/search |
-| ai-analysis.flowbroker.eth | /api/llm |
-| sentiment.flowbroker.eth | /api/sentiment |
-| classifier.flowbroker.eth | /api/classify |
-| portfolio-data.flowbroker.eth | /api/data |
-| embeddings.flowbroker.eth | /api/embeddings |
-| translator.flowbroker.eth | /api/translate |
-| summarizer.flowbroker.eth | /api/summarize |
-| chart-analyzer.flowbroker.eth | /api/vision |
-| compute.flowbroker.eth | /api/code |
-
-## Resolver
-
-`ens/src/ens-resolver.ts` provides:
-- `discoverProviders()` -- fetch all 10 providers with prices
-- `discoverBrokers()` -- fetch all 8 brokers
-- `discoverBrokerProfiles()` -- full broker metadata
-- `resolveAgent(name)` -- single agent lookup
-- `toServiceConfigs()` -- convert to backend ServiceConfig format
-
-Uses viem ENS client on Sepolia RPC (`https://ethereum-sepolia-rpc.publicnode.com`).
+```bash
+# Verify on Sepolia ENS
+https://sepolia.app.ens.domains/flowbroker.eth
+```
