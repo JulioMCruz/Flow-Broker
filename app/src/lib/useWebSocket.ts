@@ -44,6 +44,7 @@ export type WSEvent =
   | { type: "cre_complete"; data: any }
   | { type: "cre_result"; data: any }
   | { type: "ens_update"; data: any }
+  | { type: "trade"; data: any }
   | { type: "started"; data: any }
   | { type: "stopped"; data: any };
 
@@ -65,6 +66,7 @@ export function useWebSocket() {
   const [workers, setWorkers] = useState<Map<string, WorkerEvent>>(new Map());
   const [isComplete, setIsComplete] = useState(false);
   const [priceUpdates, setPriceUpdates] = useState<{ agent: string; value: string; tx: string; timestamp: number }[]>([]);
+  const [trades, setTrades] = useState<any[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
@@ -121,6 +123,10 @@ export function useWebSocket() {
         case "cre_complete":
           console.log("%c[CRE] === All Workflows Complete ===", "color: #22c55e; font-weight: bold; font-size: 12px");
           break;
+        case "trade":
+          setTrades((prev) => [msg.data, ...prev].slice(0, 30));
+          console.log(`%c[TRADE] %c${msg.data.broker} %c${msg.data.signal} → ${msg.data.amountIn} → ${msg.data.amountOut} %c${msg.data.txHash?.slice(0,14)}...`, "color: #f59e0b; font-weight: bold", "color: #fff", "color: #22c55e", "color: #3b82f6");
+          break;
         case "ens_update":
           setPriceUpdates((prev) => [{ ...msg.data, timestamp: Date.now() }, ...prev].slice(0, 20));
           console.log(`%c[ENS] Price updated: ${msg.data.agent} → ${msg.data.value} (tx: ${msg.data.tx?.slice(0, 14)}...)`, "color: #8b5cf6; font-weight: bold");
@@ -167,6 +173,7 @@ export function useWebSocket() {
     setWorkers(new Map());
     setIsComplete(false);
     setPriceUpdates([]);
+    setTrades([]);
   }, []);
 
   // Cleanup on unmount
@@ -186,5 +193,6 @@ export function useWebSocket() {
     disconnect,
     reset,
     priceUpdates,
+    trades,
   };
 }

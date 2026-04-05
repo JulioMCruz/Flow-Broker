@@ -31,7 +31,100 @@ let stats = {
   startTime: 0,
   activeWorkers: 0,
   isRunning: false,
+  totalTrades: 0,
 };
+
+// ── Uniswap Trading ──
+const UNISWAP_API_KEY = process.env.UNISWAP_API_KEY || "";
+const UNISWAP_URL = "https://trade-api.gateway.uniswap.org/v1";
+const SEPOLIA_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+const NATIVE_ETH = "0x0000000000000000000000000000000000000000";
+const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+const MAX_TRADES_PER_SESSION = 20;
+const TRADE_AMOUNT = "1000000000000000"; // 0.001 ETH
+let sessionTradeCount = 0;
+const tradeHistory: any[] = [];
+
+async function executeUniswapTrade(brokerName: string, signal: string, confidence: string) {
+  if (!UNISWAP_API_KEY || sessionTradeCount >= MAX_TRADES_PER_SESSION) return null;
+  if (signal !== "BUY" && signal !== "EXECUTE_BUY") return null;
+
+  const traderKey = process.env.DEPLOYER_KEY as `0x${string}`;
+  if (!traderKey) return null;
+
+  try {
+    const traderAddress = privateKeyToAccount(traderKey).address;
+
+    // 1. Quote
+    const quoteRes = await fetch(`${UNISWAP_URL}/quote`, {
+      method: "POST",
+      headers: { "x-api-key": UNISWAP_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tokenIn: NATIVE_ETH, tokenOut: USDC_SEPOLIA,
+        tokenInChainId: 11155111, tokenOutChainId: 11155111,
+        amount: TRADE_AMOUNT, type: "EXACT_INPUT",
+        swapper: traderAddress, slippageTolerance: 1.0,
+      }),
+    });
+    if (!quoteRes.ok) return null;
+    const quoteData = await quoteRes.json();
+    const usdcOut = (parseInt(quoteData.quote.output.amount) / 1e6).toFixed(2);
+
+    // 2. Get swap tx
+    const swapRes = await fetch(`${UNISWAP_URL}/swap`, {
+      method: "POST",
+      headers: { "x-api-key": UNISWAP_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ quote: quoteData.quote }),
+    });
+    if (!swapRes.ok) return null;
+    const swapData = await swapRes.json();
+
+    // 3. Execute on Sepolia
+    const { createWalletClient: cwc, createPublicClient: cpc, http: httpT } = await import("viem");
+    const { privateKeyToAccount: pka2 } = await import("viem/accounts");
+    const { sepolia } = await import("viem/chains");
+
+    const wallet = cwc({ account: pka2(traderKey), chain: sepolia, transport: httpT(SEPOLIA_RPC) });
+    const pub = cpc({ chain: sepolia, transport: httpT(SEPOLIA_RPC) });
+
+    const tx = swapData.swap;
+    const hash = await wallet.sendTransaction({
+      to: tx.to, data: tx.data, value: BigInt(tx.value), gas: 200000n,
+    });
+
+    const receipt = await pub.waitForTransactionReceipt({ hash });
+
+    sessionTradeCount++;
+    stats.totalTrades++;
+
+    const trade = {
+      broker: brokerName,
+      signal,
+      confidence,
+      tokenIn: "ETH",
+      tokenOut: "USDC",
+      amountIn: "0.001 ETH",
+      amountOut: `${usdcOut} USDC`,
+      txHash: hash,
+      chain: "Sepolia (11155111)",
+      routing: quoteData.routing,
+      status: receipt.status === "success" ? "success" : "failed",
+      explorer: `https://sepolia.etherscan.io/tx/${hash}`,
+      tradeNumber: sessionTradeCount,
+      maxTrades: MAX_TRADES_PER_SESSION,
+      timestamp: Date.now(),
+    };
+
+    tradeHistory.push(trade);
+    broadcast({ type: "trade", data: trade });
+    console.log(`[trade] ${brokerName}: ${signal} → swapped 0.001 ETH → ${usdcOut} USDC (${sessionTradeCount}/${MAX_TRADES_PER_SESSION}) tx: ${hash.slice(0, 14)}...`);
+
+    return trade;
+  } catch (e: any) {
+    console.log(`[trade] ${brokerName}: swap failed — ${e.message}`);
+    return null;
+  }
+}
 
 // WebSocket
 const wss = new WebSocketServer({ port: WS_PORT, host: "0.0.0.0" });
@@ -62,6 +155,8 @@ function getStats() {
     platformFees: stats.totalFees.toFixed(6),
     elapsed: Math.round(elapsed),
     isRunning: stats.isRunning,
+    totalTrades: stats.totalTrades,
+    maxTrades: MAX_TRADES_PER_SESSION,
   };
 }
 
@@ -209,6 +304,9 @@ app.post("/start", async (_req, res) => {
   stats.startTime = Date.now();
   stats.totalPayments = 0;
   stats.totalVolume = 0;
+  stats.totalTrades = 0;
+  sessionTradeCount = 0;
+  tradeHistory.length = 0;
   broadcast({ type: "started", data: getStats() });
 
   const NUM_WORKERS = 8;
@@ -265,13 +363,19 @@ app.post("/start", async (_req, res) => {
         await client.pay(url, opts);
       } catch {}
 
-      // Risk manager validates after every 5 calls
+      // Risk manager validates after every 5 calls → if BUY signal, execute Uniswap trade
       if (c % 5 === 4 && broker.name !== "risk-manager") {
         try {
           const rmSvc = SERVICES.find(s => s.name === "llm") || SERVICES[0];
           const rmUrl = `http://localhost:${PORT}${rmSvc.endpoint}`;
           await client.pay(rmUrl, { method: "POST" as const, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: `risk-check for ${broker.name}` }) });
         } catch {}
+
+        // Check if signal is BUY and execute trade via Uniswap API
+        const { data: signalData } = getServiceData("summarize");
+        if (signalData.decision === "EXECUTE_BUY" || signalData.decision === "BUY") {
+          await executeUniswapTrade(broker.name, signalData.decision, signalData.summary || "");
+        }
       }
 
       await new Promise(r => setTimeout(r, 200 + Math.random() * 400));
@@ -621,6 +725,11 @@ app.post("/cre-run", async (_req, res) => {
   creLog("CRE", "INFO", `[SIMULATION] Execution finished`);
   broadcast({ type: "cre_complete", data: { workflows: results.length, timestamp: Date.now() } });
   res.json({ workflows: results });
+});
+
+// Trades endpoint — list Uniswap trades executed by brokers
+app.get("/trades", (_req, res) => {
+  res.json({ trades: tradeHistory, count: tradeHistory.length, max: MAX_TRADES_PER_SESSION });
 });
 
 // Settlement endpoint — called by CRE Settlement Monitor workflow
