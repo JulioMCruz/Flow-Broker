@@ -13,11 +13,15 @@ export function Dashboard() {
   const isRunning = connected && !isComplete;
   const [txCount, setTxCount] = useState("200");
   const [profile, setProfile] = useState("balanced");
-  const [tab, setTab] = useState<"flow" | "calls" | "settlement" | "cre" | "verify" | "bounty">("flow");
+  const [tab, setTab] = useState<"flow" | "calls" | "settlement" | "cre" | "ens" | "verify" | "bounty">("flow");
   const [creLogs, setCreLogs] = useState<any[]>([]);
   const [creResults, setCreResults] = useState<any[]>([]);
   const [gwStatus, setGwStatus] = useState<any>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentEvent | null>(null);
+  const [ensPrices, setEnsPrices] = useState<Record<string, string>>({});
+  const [priceAgent, setPriceAgent] = useState("search");
+  const [newPrice, setNewPrice] = useState("0.0005");
+  const [priceResult, setPriceResult] = useState("");
 
   // Auto-refresh gateway status while running
   useEffect(() => {
@@ -51,6 +55,7 @@ export function Dashboard() {
     { id: "calls", label: "Calls" },
     { id: "settlement", label: "Settlement" },
     { id: "cre", label: "CRE" },
+    { id: "ens", label: "ENS" },
     { id: "verify", label: "Verify" },
     { id: "bounty", label: "Protocols" },
   ] as const;
@@ -120,6 +125,9 @@ export function Dashboard() {
             setSelectedPayment(null);
             if (t.id === "settlement") {
               try { setGwStatus(await (await fetch(api("/gateway-status"))).json()); } catch {}
+            }
+            if (t.id === "ens") {
+              try { setEnsPrices(await (await fetch(api("/prices"))).json()); } catch {}
             }
             if (t.id === "cre") {
               try {
@@ -478,6 +486,178 @@ export function Dashboard() {
           {creResults.length === 0 && creLogs.length === 0 && (
             <p className="text-gray-400 text-sm text-center py-12">Click the CRE tab to execute workflows</p>
           )}
+        </div>
+      )}
+
+      {/* ── ENS Tab ── */}
+      {tab === "ens" && (
+        <div className="space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-semibold">flowbroker.eth</h2>
+                <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5 font-medium">Live from Sepolia</span>
+                <a href="https://sepolia.app.ens.domains/flowbroker.eth" target="_blank" rel="noopener noreferrer"
+                  className="text-[10px] text-blue-600 hover:underline">View on ENS →</a>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">18 subnames: 8 brokers + 10 providers. Agents discover each other via ENS text records.</p>
+            </div>
+            <button onClick={() => fetch(api("/prices")).then(r => r.json()).then(setEnsPrices).catch(() => {})}
+              className="text-[10px] text-blue-600 hover:underline">Refresh prices</button>
+          </div>
+
+          {/* How ENS works in Flow Broker */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-xs font-semibold text-blue-800 mb-2">How agents use ENS for discovery</p>
+            <div className="grid grid-cols-4 gap-2 text-[10px] text-blue-700 font-mono">
+              <div className="bg-white rounded p-2 text-center border border-blue-100">
+                <p className="font-semibold text-blue-900">1. Resolve</p>
+                <p>getEnsText(agent.flowbroker.eth)</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-blue-100">
+                <p className="font-semibold text-blue-900">2. Read Price</p>
+                <p>com.x402.price → "$0.001"</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-blue-100">
+                <p className="font-semibold text-blue-900">3. Pay</p>
+                <p>x402 nanopayment at ENS price</p>
+              </div>
+              <div className="bg-white rounded p-2 text-center border border-blue-100">
+                <p className="font-semibold text-blue-900">4. React</p>
+                <p>Price changes → agents adapt in 30s</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Provider Agents */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold">Information Providers</h3>
+              <span className="text-[10px] text-gray-400">10 subnames</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {Object.entries(PROVIDERS).map(([key, p]) => {
+                const livePrice = ensPrices[key];
+                const hasUpdate = priceUpdates.some(pu => pu.agent.replace(".flowbroker.eth", "") === key && Date.now() - pu.timestamp < 30000);
+                return (
+                  <a key={key} href={`https://sepolia.app.ens.domains/${p.ens}`} target="_blank" rel="noopener noreferrer"
+                    className={`block border rounded-lg p-4 hover:border-blue-300 transition-all ${hasUpdate ? "border-purple-300 bg-purple-50" : "border-gray-200"}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-gray-800">{p.label}</span>
+                      <span className={`text-xs font-mono font-bold ${hasUpdate ? "text-purple-600" : "text-emerald-600"}`}>
+                        {livePrice || p.price}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-blue-500 font-mono mb-1">{p.ens}</p>
+                    <div className="space-y-1 text-[10px]">
+                      <div className="flex justify-between text-gray-500">
+                        <span>com.x402.price</span>
+                        <span className="font-mono text-gray-700">{livePrice || "..."}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-500">
+                        <span>com.agent.capabilities</span>
+                        <span className="text-gray-700 truncate ml-2">{p.type}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-500">
+                        <span>com.agent.type</span>
+                        <span className="text-gray-700">provider</span>
+                      </div>
+                      <div className="flex justify-between text-gray-500">
+                        <span>com.agent.status</span>
+                        <span className="text-emerald-600">active</span>
+                      </div>
+                    </div>
+                    {hasUpdate && (
+                      <div className="mt-2 text-[9px] text-purple-500 font-semibold animate-pulse">CRE just updated this price</div>
+                    )}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Broker Agents */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="text-sm font-semibold">Broker Agents</h3>
+              <span className="text-[10px] text-gray-400">8 subnames</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {BROKERS.map((b) => (
+                <a key={b.id} href={`https://sepolia.app.ens.domains/${b.id}.flowbroker.eth`} target="_blank" rel="noopener noreferrer"
+                  className="block border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-800">{b.label}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      b.profile === "Conservative" ? "bg-blue-100 text-blue-600" :
+                      b.profile === "Balanced" ? "bg-green-100 text-green-600" :
+                      b.profile === "Growth" ? "bg-amber-100 text-amber-600" :
+                      "bg-red-100 text-red-600"
+                    }`}>{b.profile}</span>
+                  </div>
+                  <p className="text-[11px] text-blue-500 font-mono mb-1">{b.id}.flowbroker.eth</p>
+                  <div className="space-y-1 text-[10px]">
+                    <div className="flex justify-between text-gray-500">
+                      <span>com.agent.type</span>
+                      <span className="text-gray-700">broker</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>com.agent.providers</span>
+                      <span className="text-gray-700 truncate ml-2">{b.providers.join(", ")}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>com.agent.status</span>
+                      <span className="text-emerald-600">active</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
+                      <span>cost</span>
+                      <span className="text-gray-700">{b.cost}</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Live Price Change Demo */}
+          <div className="border border-gray-200 rounded-lg p-5">
+            <p className="text-sm font-semibold mb-1">Live Price Change Demo</p>
+            <p className="text-[10px] text-gray-400 mb-3">Update an agent's ENS price on Sepolia. Brokers discover the new price within 30 seconds.</p>
+            <div className="flex gap-3 items-end">
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">Agent</label>
+                <select value={priceAgent} onChange={e => setPriceAgent(e.target.value)}
+                  className="border border-gray-200 rounded px-3 py-1.5 text-xs bg-white">
+                  {Object.keys(PROVIDERS).map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">New Price (USDC)</label>
+                <input value={newPrice} onChange={e => setNewPrice(e.target.value)}
+                  className="w-24 border border-gray-200 rounded px-3 py-1.5 text-xs font-mono" />
+              </div>
+              <button onClick={async () => {
+                setPriceResult("writing to ENS...");
+                try {
+                  const res = await fetch(api("/change-price"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ agent: priceAgent, newPrice }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    setPriceResult(`Updated on Sepolia: tx ${data.tx.slice(0, 20)}...`);
+                    setTimeout(() => fetch(api("/prices")).then(r => r.json()).then(setEnsPrices), 3000);
+                  } else setPriceResult(data.error || "failed");
+                } catch (e: any) { setPriceResult(e.message); }
+              }}
+                className="px-4 py-1.5 bg-gray-900 text-white rounded text-xs font-medium hover:bg-gray-800">
+                Update ENS
+              </button>
+            </div>
+            {priceResult && <p className="text-[10px] text-gray-500 mt-2 font-mono">{priceResult}</p>}
+          </div>
         </div>
       )}
 
