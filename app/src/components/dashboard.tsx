@@ -6,6 +6,7 @@ import { useWebSocket } from "@/lib/useWebSocket";
 import { api } from "@/lib/api";
 import { BROKERS, PROVIDERS, providerLabel, brokerLabel } from "@/lib/agents";
 import { FlowView } from "@/components/flow-view";
+import { ActivationsPanel } from "@/components/activations-panel";
 import { BountyPanel } from "@/components/bounty-panel";
 import { LiveTicker } from "@/components/live-ticker";
 

@@ -58,6 +58,25 @@ export function WalletActivation({ brokerName, depositAmount }: Props) {
           </div>
         );
 
+        // Send activation to backend when payment confirms
+        if (isSuccess && txHash && !done) {
+          setDone(true);
+          fetch("https://api.perkmesh.perkos.xyz/activate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ broker: brokerName, txHash, userAddress: address }),
+          }).catch(() => {});
+        }
+
+        // Notify backend about this activation
+        if (isSuccess && txHash) {
+          fetch("https://api.perkmesh.perkos.xyz/activate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ broker: brokerName, txHash, userAddress: address }),
+          }).catch(() => {});
+        }
+
         if (isSuccess) return (
           <div className="space-y-4">
             <div className="w-full p-4 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg text-green-700">

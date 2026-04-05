@@ -818,6 +818,35 @@ app.post("/settle", async (_req, res) => {
   }
 });
 
+// Recent activations (user paid to activate a broker)
+const recentActivations: any[] = [];
+
+app.post("/activate", (req, res) => {
+  const { broker, txHash, userAddress } = req.body;
+  if (!broker || !txHash) return res.status(400).json({ error: "missing broker or txHash" });
+
+  const activation = {
+    broker,
+    userAddress: userAddress || "unknown",
+    txHash,
+    timestamp: Date.now(),
+    arcScan: `https://testnet.arcscan.app/tx/${txHash}`,
+  };
+
+  recentActivations.unshift(activation);
+  if (recentActivations.length > 20) recentActivations.pop();
+
+  // Broadcast to dashboard
+  broadcast({ type: "activation", data: activation });
+
+  console.log(`[activation] ${broker} activated by ${userAddress?.slice(0, 10)}... tx: ${txHash.slice(0, 14)}...`);
+  res.json({ success: true, activation });
+});
+
+app.get("/activations", (_req, res) => {
+  res.json({ activations: recentActivations.slice(0, 5) });
+});
+
 // STOP endpoint
 app.post("/stop", (_req, res) => {
   stats.isRunning = false;
