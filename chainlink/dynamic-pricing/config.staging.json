@@ -1,5 +1,6 @@
 {
   "pricingApiUrl": "https://api.coingecko.com/api/v3/simple/price",
+  "backendUrl": "https://api.perkmesh.perkos.xyz",
   "agents": [
     { "id": 0, "name": "llm",        "basePrice": 100,  "costMultiplier": 1.0 },
     { "id": 1, "name": "search",     "basePrice": 1000, "costMultiplier": 0.8 },

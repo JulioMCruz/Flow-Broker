@@ -412,6 +412,55 @@ app.post("/change-price", async (req, res) => {
   }
 });
 
+// Batch price update — called by CRE Dynamic Pricing workflow
+// Receives all agent prices in one call, updates ENS text records
+app.post("/update-prices", async (_req, res) => {
+  const { prices, ethPrice, txHash } = _req.body || {};
+  if (!prices || !Array.isArray(prices)) return res.status(400).json({ error: "prices array required" });
+
+  creLog("dynamic-pricing", "INFO", `[CRE] Batch price update: ${prices.length} agents, ETH/USD: $${ethPrice}`);
+
+  const { createWalletClient, http } = await import("viem");
+  const { privateKeyToAccount: pka } = await import("viem/accounts");
+  const { sepolia } = await import("viem/chains");
+  const { normalize, namehash } = await import("viem/ens");
+
+  const DEPLOYER_KEY = process.env.DEPLOYER_KEY as `0x${string}`;
+  if (!DEPLOYER_KEY) return res.status(500).json({ error: "DEPLOYER_KEY not set" });
+
+  const wallet = createWalletClient({
+    chain: sepolia,
+    transport: http("https://ethereum-sepolia-rpc.publicnode.com"),
+    account: pka(DEPLOYER_KEY),
+  });
+
+  const RESOLVER = "0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5" as `0x${string}`;
+  const results: any[] = [];
+
+  for (const { agent, price } of prices) {
+    try {
+      const node = namehash(normalize(`${agent}.flowbroker.eth`));
+      const hash = await wallet.writeContract({
+        address: RESOLVER,
+        abi: [{ name: "setText", type: "function", stateMutability: "nonpayable", inputs: [{ name: "node", type: "bytes32" }, { name: "key", type: "string" }, { name: "value", type: "string" }], outputs: [] }],
+        functionName: "setText",
+        args: [node, "com.x402.price", price],
+      });
+
+      ensPrices[agent] = `$${price}`;
+      creLog("dynamic-pricing", "INFO", `[CRE] ENS updated: ${agent} → $${price} (tx: ${hash.slice(0, 14)}...)`);
+      broadcast({ type: "ens_update", data: { agent: `${agent}.flowbroker.eth`, key: "com.x402.price", value: price, tx: hash, timestamp: Date.now() } });
+      results.push({ agent, price, tx: hash, success: true });
+    } catch (err: any) {
+      creLog("dynamic-pricing", "ERROR", `ENS update failed for ${agent}: ${err.message}`);
+      results.push({ agent, error: err.message, success: false });
+    }
+  }
+
+  loadENSPrices().catch(() => {});
+  res.json({ success: true, updated: results.filter(r => r.success).length, total: prices.length, results });
+});
+
 // CRE status
 app.get("/cre-status", (_req, res) => {
   res.json({
@@ -572,6 +621,35 @@ app.post("/cre-run", async (_req, res) => {
   creLog("CRE", "INFO", `[SIMULATION] Execution finished`);
   broadcast({ type: "cre_complete", data: { workflows: results.length, timestamp: Date.now() } });
   res.json({ workflows: results });
+});
+
+// Settlement endpoint — called by CRE Settlement Monitor workflow
+app.post("/settle", async (_req, res) => {
+  const { batchId, paymentCount, totalAmount } = _req.body || {};
+  creLog("settlement-monitor", "INFO", `[CRE] Settlement request received — batch=${batchId}, count=${paymentCount}, amount=${totalAmount}`);
+
+  try {
+    const client = new GatewayClient({ chain: "arcTestnet", privateKey: SELLER_KEY });
+    const balances = await client.getBalances();
+
+    const result = {
+      status: "settlement-recorded",
+      batchId,
+      paymentCount,
+      totalAmount,
+      gatewayBalance: balances.gateway.formattedAvailable,
+      walletBalance: balances.wallet.formatted,
+      timestamp: Date.now(),
+    };
+
+    creLog("settlement-monitor", "INFO", `[CRE] Settlement confirmed — gateway: $${balances.gateway.formattedAvailable} USDC`);
+    broadcast({ type: "cre_result", data: { workflow: "Settlement Monitor", trigger: "CRE Log Trigger", ...result } });
+
+    res.json(result);
+  } catch (e: any) {
+    creLog("settlement-monitor", "ERROR", `Settlement failed: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // STOP endpoint

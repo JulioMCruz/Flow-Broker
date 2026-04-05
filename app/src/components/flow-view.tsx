@@ -14,9 +14,17 @@ import { BROKERS, PROVIDERS } from "@/lib/agents";
 import type { PaymentEvent } from "@/lib/useWebSocket";
 import { brokerLabel, providerLabel } from "@/lib/agents";
 
+interface PriceUpdate {
+  agent: string;
+  value: string;
+  tx: string;
+  timestamp: number;
+}
+
 interface FlowViewProps {
   payments: PaymentEvent[];
   isRunning: boolean;
+  priceUpdates?: PriceUpdate[];
 }
 
 const profileColor: Record<string, { bg: string; border: string; badge: string }> = {
@@ -31,7 +39,20 @@ function parseAmount(amount: string): number {
   return isNaN(n) ? 0 : n;
 }
 
-export function FlowView({ payments, isRunning }: FlowViewProps) {
+export function FlowView({ payments, isRunning, priceUpdates = [] }: FlowViewProps) {
+  // Track which providers had recent price updates (last 15 seconds)
+  const recentPriceChanges = useMemo(() => {
+    const now = Date.now();
+    const recent = new Set<string>();
+    for (const pu of priceUpdates) {
+      if (now - pu.timestamp < 15000) {
+        // Extract agent name from "search.flowbroker.eth" or just "search"
+        const name = pu.agent.replace(".flowbroker.eth", "");
+        recent.add(name);
+      }
+    }
+    return recent;
+  }, [priceUpdates]);
   // Calculate earnings per provider and spending per broker
   const { providerEarnings, brokerSpending } = useMemo(() => {
     const pe: Record<string, number> = {};
@@ -83,6 +104,8 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
     const providerNodes: Node[] = Object.entries(PROVIDERS).map(([key, p], i) => {
       const earned = providerEarnings[key] || 0;
       const hasEarnings = earned > 0;
+      const hasPriceChange = recentPriceChanges.has(key);
+      const priceUpdate = priceUpdates.find(pu => pu.agent.replace(".flowbroker.eth", "") === key);
       return {
         id: `provider-${key}`,
         position: { x: 560, y: i * 78 },
@@ -91,8 +114,13 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
             <div className="text-left w-full">
               <div className="flex justify-between items-center">
                 <span className="font-bold text-[15px] text-gray-800">{p.label}</span>
-                <span className="text-[12px] text-emerald-600 font-mono font-semibold">{p.price}</span>
+                <span className={`text-[12px] font-mono font-semibold ${hasPriceChange ? "text-purple-600" : "text-emerald-600"}`}>
+                  {hasPriceChange && priceUpdate ? `$${priceUpdate.value}` : p.price}
+                </span>
               </div>
+              {hasPriceChange && (
+                <div className="text-[9px] text-purple-500 font-semibold animate-pulse">CRE price update</div>
+              )}
               <div className="text-[12px] text-gray-400 mt-0.5">{p.type}</div>
               <div className="flex justify-between items-center mt-0.5">
                 <span className="text-[11px] text-blue-400 font-mono">{p.ens}</span>
@@ -107,8 +135,10 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
         },
         targetPosition: Position.Left,
         style: {
-          background: hasEarnings ? "#f0fdf4" : "#f8fafc",
-          border: hasEarnings ? "1.5px solid #86efac" : "1.5px solid #cbd5e1",
+          background: hasPriceChange ? "#faf5ff" : hasEarnings ? "#f0fdf4" : "#f8fafc",
+          border: hasPriceChange ? "2px solid #a855f7" : hasEarnings ? "1.5px solid #86efac" : "1.5px solid #cbd5e1",
+          boxShadow: hasPriceChange ? "0 0 12px rgba(168, 85, 247, 0.3)" : "none",
+          transition: "all 0.5s ease",
           borderRadius: 10,
           padding: "8px 12px",
           fontSize: 11,
@@ -118,7 +148,7 @@ export function FlowView({ payments, isRunning }: FlowViewProps) {
     });
 
     return [...brokerNodes, ...providerNodes];
-  }, [providerEarnings, brokerSpending]);
+  }, [providerEarnings, brokerSpending, recentPriceChanges, priceUpdates]);
 
   const edges: Edge[] = useMemo(() => {
     if (!isRunning && payments.length === 0) return [];

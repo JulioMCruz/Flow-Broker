@@ -64,6 +64,7 @@ export function useWebSocket() {
   const [payments, setPayments] = useState<PaymentEvent[]>([]);
   const [workers, setWorkers] = useState<Map<string, WorkerEvent>>(new Map());
   const [isComplete, setIsComplete] = useState(false);
+  const [priceUpdates, setPriceUpdates] = useState<{ agent: string; value: string; tx: string; timestamp: number }[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   const connect = useCallback(() => {
@@ -121,6 +122,7 @@ export function useWebSocket() {
           console.log("%c[CRE] === All Workflows Complete ===", "color: #22c55e; font-weight: bold; font-size: 12px");
           break;
         case "ens_update":
+          setPriceUpdates((prev) => [{ ...msg.data, timestamp: Date.now() }, ...prev].slice(0, 20));
           console.log(`%c[ENS] Price updated: ${msg.data.agent} → ${msg.data.value} (tx: ${msg.data.tx?.slice(0, 14)}...)`, "color: #8b5cf6; font-weight: bold");
           break;
         case "worker_joined":
@@ -164,6 +166,7 @@ export function useWebSocket() {
     });
     setWorkers(new Map());
     setIsComplete(false);
+    setPriceUpdates([]);
   }, []);
 
   // Cleanup on unmount
@@ -182,5 +185,6 @@ export function useWebSocket() {
     connect,
     disconnect,
     reset,
+    priceUpdates,
   };
 }

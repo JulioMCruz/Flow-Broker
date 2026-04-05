@@ -2,6 +2,46 @@
 
 Express server with 10 x402-protected intelligence services, 8 worker broker agents, and WebSocket broadcaster.
 
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Express Server :3001
+        MW[x402 Gateway Middleware]
+        S1[/api/search] & S2[/api/llm] & S3[/api/sentiment] & S4[...7 more]
+        START[POST /start]
+        GWS[GET /gateway-status]
+        SETTLE[POST /settle]
+        UPD[POST /update-prices]
+    end
+
+    subgraph Workers
+        W1[Guardian] & W2[Sentinel] & W3[...] & W8[Titan]
+    end
+
+    subgraph WebSocket :3002
+        WS[Broadcast]
+    end
+
+    subgraph External
+        ENS[flowbroker.eth]
+        GW[Circle Gateway]
+        CRE[Chainlink CRE]
+    end
+
+    START -->|launch 8 workers| W1 & W2 & W3 & W8
+    W1 & W2 & W3 & W8 -->|GatewayClient.pay| MW
+    MW -->|verify x402| S1 & S2 & S3 & S4
+    MW -->|accumulate| GW
+    S1 & S2 -->|payment event| WS
+    WS -->|real-time| Dashboard
+
+    ENS -->|prices every 30s| MW
+    CRE -->|POST /settle| SETTLE
+    CRE -->|POST /update-prices| UPD
+    UPD -->|setText| ENS
+```
+
 ## x402 Integration
 
 Uses Circle Gateway SDK for real nanopayments on Arc Testnet:
@@ -72,7 +112,7 @@ BUYER_KEY=0x...           # buyer wallet (for single agent tests)
 WORKER_1_KEY=0x...        # worker wallets (up to 8)
 ...
 WORKER_8_KEY=0x...
-DEPLOYER_KEY=0x...        # for ENS price changes (Sepolia signer)
+DEPLOYER_KEY=0x...        # contract deployer/owner wallet
 ```
 
 ## Endpoints
@@ -84,7 +124,9 @@ DEPLOYER_KEY=0x...        # for ENS price changes (Sepolia signer)
 | /start | POST | Launch 8 worker agents (body: { cycles, profile }) |
 | /stop | POST | Stop workers |
 | /gateway-status | GET | Circle Gateway balance, batch info, recent payments |
-| /cre-run | POST | Execute CRE workflows |
+| /settle | POST | CRE Settlement Monitor callback — records batch settlement |
+| /update-prices | POST | CRE Dynamic Pricing callback — batch updates ENS text records |
+| /cre-run | POST | Execute CRE workflow simulations |
 | /cre-logs | GET | CRE execution logs |
 | /change-price | POST | Update ENS text record on Sepolia |
 | /registry | GET | On-chain agent count from AgentRegistry |

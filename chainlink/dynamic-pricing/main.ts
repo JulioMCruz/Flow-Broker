@@ -2,10 +2,11 @@
 // PerkMesh — Dynamic Pricing Oracle CRE Workflow
 // =============================================================================
 // Trigger:  Cron (every 30 minutes)
-// Action:   HTTP fetch external pricing data (CoinGecko ETH/USDC),
-//           calculate fair agent prices based on compute cost index
-// Output:   EVM Write to PricingOracle — batch price update via writeReport
-// Bounty:   Chainlink CRE — "integrate blockchain with external API/system"
+// Action:   1. HTTP fetch ETH/USD from CoinGecko
+//           2. Calculate fair agent prices based on compute cost index
+//           3. EVM Write to PricingOracle on-chain (via KeystoneForwarder)
+//           4. HTTP POST to backend /change-price → updates ENS text records
+//              so agents read the new prices within 30s
 // =============================================================================
 
 import {
@@ -29,8 +30,8 @@ import { encodeAbiParameters, parseAbiParameters } from "viem";
 type AgentPriceConfig = {
   id: number;
   name: string;
-  basePrice: number; // USDC atomic units (6 decimals) — base cost
-  costMultiplier: number; // scale factor based on compute intensity
+  basePrice: number;
+  costMultiplier: number;
 };
 
 type EvmConfig = {
@@ -41,6 +42,7 @@ type EvmConfig = {
 
 type Config = {
   pricingApiUrl: string;
+  backendUrl: string;
   agents: AgentPriceConfig[];
   evms: EvmConfig[];
 };
@@ -49,26 +51,10 @@ type Config = {
 // Price calculation
 // ---------------------------------------------------------------------------
 
-/**
- * Adjusts agent prices based on external market data.
- *
- * Strategy: fetch ETH/USD price as a proxy for network compute cost.
- * When ETH is expensive, on-chain operations cost more, so agent prices
- * scale up. Each agent has a base price and a cost multiplier reflecting
- * its compute intensity.
- *
- * Formula: finalPrice = basePrice * costMultiplier * (1 + priceAdjustment)
- *   where priceAdjustment = (ethPrice - 2000) / 20000  (clamped to +/- 50%)
- *
- * This ensures prices stay responsive to market conditions while bounded.
- */
 function calculatePrices(
   agents: AgentPriceConfig[],
   ethPriceUsd: number
 ): bigint[] {
-  // Compute a cost adjustment factor from ETH price
-  // Baseline: $2000 ETH = 0% adjustment
-  // $4000 ETH = +10% adjustment, $1000 ETH = -5% adjustment
   const priceAdjustment = Math.max(
     -0.5,
     Math.min(0.5, (ethPriceUsd - 2000) / 20000)
@@ -78,9 +64,14 @@ function calculatePrices(
     const adjusted = Math.round(
       agent.basePrice * agent.costMultiplier * (1 + priceAdjustment)
     );
-    // Ensure minimum price of 1 atomic unit
     return BigInt(Math.max(1, adjusted));
   });
+}
+
+// Convert atomic USDC (6 decimals) to dollar string for ENS
+function atomicToUsd(atomic: bigint): string {
+  const n = Number(atomic) / 1_000_000;
+  return n.toFixed(6);
 }
 
 // ---------------------------------------------------------------------------
@@ -124,8 +115,7 @@ function onPriceUpdate(runtime: Runtime<Config>): string {
     `Calculated prices for ${agentIds.length} agents: [${newPrices.join(", ")}]`
   );
 
-  // 3. Encode report matching PricingOracle._processReport() format:
-  //    abi.encode(uint256[] agentIds, uint256[] prices)
+  // 3. Encode report matching PricingOracle._processReport() format
   const reportData = encodeAbiParameters(
     parseAbiParameters("uint256[] agentIds, uint256[] prices"),
     [agentIds, newPrices]
@@ -158,14 +148,50 @@ function onPriceUpdate(runtime: Runtime<Config>): string {
     })
     .result();
 
-  if (writeResult.txStatus === TxStatus.SUCCESS) {
-    const txHash = bytesToHex(writeResult.txHash!);
-    runtime.log(`PricingOracle updated — tx: ${txHash}`);
-    return `prices-updated-tx-${txHash}`;
+  if (writeResult.txStatus !== TxStatus.SUCCESS) {
+    runtime.log("Failed to update PricingOracle");
+    return "price-update-failed";
   }
 
-  runtime.log("Failed to update PricingOracle");
-  return "price-update-failed";
+  const txHash = bytesToHex(writeResult.txHash!);
+  runtime.log(`PricingOracle updated on-chain — tx: ${txHash}`);
+
+  // 5. HTTP POST: batch update ENS text records via backend /update-prices
+  //    Closes the loop: CRE → PricingOracle (on-chain) → ENS (Sepolia) → Agents
+  const priceUpdates = config.agents.map((agent, idx) => ({
+    agent: agent.name,
+    price: atomicToUsd(newPrices[idx]),
+  }));
+
+  const ensResult = httpClient.sendRequest(
+    runtime,
+    (sendRequester: HTTPSendRequester) => {
+      const payload = JSON.stringify({
+        prices: priceUpdates,
+        ethPrice: priceData,
+        txHash,
+      });
+
+      const resp = sendRequester
+        .sendRequest({
+          url: `${config.backendUrl}/update-prices`,
+          method: "POST",
+          body: Buffer.from(payload).toString("base64"),
+          headers: { "Content-Type": "application/json" },
+          cacheSettings: { store: false, maxAge: "0s" },
+        })
+        .result();
+
+      const bodyText = new TextDecoder().decode(resp.body);
+      return { statusCode: resp.statusCode, body: bodyText };
+    },
+    consensusIdenticalAggregation<{ statusCode: number; body: string }>()
+  )().result();
+
+  runtime.log(`ENS batch update response: status=${ensResult.statusCode}`);
+  runtime.log(`Updated ${config.agents.length} agent prices via ENS`);
+
+  return `prices-updated-tx-${txHash}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,7 +203,7 @@ const initWorkflow = (config: Config) => {
 
   return [
     cre.handler(
-      cron.trigger({ schedule: "0 */30 * * * *" }), // every 30 minutes
+      cron.trigger({ schedule: "0 */30 * * * *" }),
       onPriceUpdate
     ),
   ];

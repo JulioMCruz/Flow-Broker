@@ -2,6 +2,26 @@
 
 Flow Broker uses **flowbroker.eth** (Sepolia) as the agent service mesh for dynamic discovery and pricing.
 
+## Price Discovery Flow
+
+```mermaid
+sequenceDiagram
+    participant CRE as Chainlink CRE
+    participant BE as Backend
+    participant ENS as flowbroker.eth (Sepolia)
+    participant Broker as Broker Agent
+
+    Note over CRE: Every 30 min
+    CRE->>BE: POST /update-prices (10 agents)
+    BE->>ENS: setText("com.x402.price", "0.001")
+    Note over BE: Repeat for each agent
+
+    Note over Broker: Every 30s
+    Broker->>ENS: getEnsText("market-data.flowbroker.eth", "com.x402.price")
+    ENS-->>Broker: "0.001"
+    Broker->>Broker: Use price for next x402 call
+```
+
 ## Domain
 
 [flowbroker.eth on ENS](https://sepolia.app.ens.domains/flowbroker.eth)

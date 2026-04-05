@@ -18014,15 +18014,21 @@ function onPaymentThreshold(runtime2, log) {
   });
   runtime2.log(`Confirmed batch stats — id=${batchStats[0]}, count=${batchStats[1]}, amount=${batchStats[2]}, threshold=${batchStats[3]}`);
   const httpClient = new cre.capabilities.HTTPClient;
-  const circleResponse = httpClient.sendRequest(runtime2, (sendRequester) => {
+  const backendResponse = httpClient.sendRequest(runtime2, (sendRequester) => {
     const payload = JSON.stringify({
       batchId: batchId.toString(),
       paymentCount: count.toString(),
       totalAmount: totalAmount.toString(),
-      chain: "eip155:5042002"
+      confirmedOnChain: true,
+      batchStats: {
+        id: batchStats[0].toString(),
+        count: batchStats[1].toString(),
+        amount: batchStats[2].toString(),
+        threshold: batchStats[3].toString()
+      }
     });
     const resp = sendRequester.sendRequest({
-      url: `${config.circleGatewayUrl}/v1/settle`,
+      url: `${config.backendUrl}/settle`,
       method: "POST",
       body: Buffer.from(payload).toString("base64"),
       headers: {
@@ -18033,27 +18039,8 @@ function onPaymentThreshold(runtime2, log) {
     const bodyText = new TextDecoder().decode(resp.body);
     return { statusCode: resp.statusCode, body: bodyText };
   }, consensusIdenticalAggregation())().result();
-  runtime2.log(`Circle Gateway response: status=${circleResponse.statusCode}`);
-  const backendResponse = httpClient.sendRequest(runtime2, (sendRequester) => {
-    const payload = JSON.stringify({
-      batchId: batchId.toString(),
-      paymentCount: count.toString(),
-      totalAmount: totalAmount.toString(),
-      circleResponse: circleResponse.body
-    });
-    const resp = sendRequester.sendRequest({
-      url: config.backendSettlementUrl,
-      method: "POST",
-      body: Buffer.from(payload).toString("base64"),
-      headers: {
-        "Content-Type": "application/json"
-      },
-      cacheSettings: { store: false, maxAge: "0s" }
-    }).result();
-    return resp.statusCode;
-  }, consensusIdenticalAggregation())().result();
-  runtime2.log(`Backend settlement response: status=${backendResponse}`);
-  return `batch-${batchId}-settlement-triggered`;
+  runtime2.log(`Backend settlement response: status=${backendResponse.statusCode}`);
+  return `batch-${batchId}-settlement-recorded`;
 }
 var initWorkflow = (config) => {
   const network282 = getNetwork({
