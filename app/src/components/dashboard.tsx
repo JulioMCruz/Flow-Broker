@@ -909,6 +909,19 @@ export function Dashboard() {
             <p className="text-sm font-medium mt-4">CRE Workflows</p>
             <p className="text-xs text-gray-500">3 workflows on CRE CLI v1.9.0</p>
             <p className="text-xs text-gray-500">Health Monitor, Dynamic Pricing, Settlement</p>
+
+            <p className="text-sm font-medium mt-4">Uniswap (Sepolia)</p>
+            <p className="text-xs text-gray-500">API: trade-api.gateway.uniswap.org/v1</p>
+            <p className="text-xs text-gray-500">Routing: BEST_PRICE across all Uniswap pools</p>
+            <p className="text-xs text-gray-500">Tokens: ETH, USDC, WETH, UNI</p>
+            <a href="https://sepolia.etherscan.io/address/0x44ACAb497e28c6F700528FE7C281A4A1e557d155" target="_blank" rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-[10px] block">View trader wallet on Etherscan →</a>
+
+            <p className="text-sm font-medium mt-4">ERC-8004 Identities (Arc)</p>
+            <p className="text-xs text-gray-500">8 brokers registered on IdentityRegistry</p>
+            <a href="https://testnet.arcscan.app/address/0x8004A818BFB912233c491871b3d84c89A494BD9e" target="_blank" rel="noopener noreferrer"
+              className="text-blue-600 hover:underline text-[10px] block">IdentityRegistry on ArcScan →</a>
+            <p className="text-[10px] text-gray-400">Token IDs: #1448 (Guardian) → #1455 (Titan)</p>
           </div>
         </div>
       )}

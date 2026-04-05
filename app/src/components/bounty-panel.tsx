@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function BountyPanel({ totalPayments, totalVolume, gasSaved }: Props) {
-  const [tab, setTab] = useState<"arc" | "ens" | "cre">("arc");
+  const [tab, setTab] = useState<"arc" | "ens" | "cre" | "uni">("arc");
   const [gwStatus, setGwStatus] = useState<any>(null);
   const [ensPrices, setEnsPrices] = useState<Record<string, string>>({});
   const [creLogs, setCreLogs] = useState<any[]>([]);
@@ -58,10 +58,10 @@ export function BountyPanel({ totalPayments, totalVolume, gasSaved }: Props) {
   return (
     <div className="border border-gray-200 rounded-lg">
       <div className="flex border-b border-gray-100">
-        {(["arc", "ens", "cre"] as const).map(t => (
+        {(["arc", "ens", "cre", "uni"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 py-2 text-xs font-medium ${tab === t ? "border-b-2 border-gray-900 text-gray-900" : "text-gray-400 hover:bg-gray-50"}`}>
-            {t === "arc" ? "Arc x402" : t === "ens" ? "ENS" : "Chainlink CRE"}
+            {t === "arc" ? "Arc x402" : t === "ens" ? "ENS" : t === "cre" ? "Chainlink CRE" : "Uniswap"}
           </button>
         ))}
       </div>
@@ -214,6 +214,33 @@ export function BountyPanel({ totalPayments, totalVolume, gasSaved }: Props) {
             )}
           </>
         )}
+      {tab === "uni" && (
+        <>
+          <p className="font-medium mb-1">How brokers use Uniswap</p>
+          <div className="bg-gray-50 rounded p-3 font-mono text-[10px] space-y-1 text-gray-600">
+            <p className="text-gray-400">// Each broker has a token strategy:</p>
+            <p>Guardian / Sentinel → ETH → USDC (preserve capital)</p>
+            <p>Navigator / Momentum → ETH → UNI (trend + governance)</p>
+            <p>Apex / Titan → ETH → UNI (alpha, max conviction)</p>
+            <p className="text-amber-600 mt-1">// After 5 intelligence calls with BUY signal:</p>
+            <p>1. GET /quote  (routingPreference: BEST_PRICE)</p>
+            <p>2. GET /swap   (get transaction data)</p>
+            <p>3. Send tx on Sepolia</p>
+            <p className="text-green-600 mt-1">// Cross-broker coordination:</p>
+            <p>broker buys UNI → broadcasts COORDINATION_BUY</p>
+            <p>other brokers see signal → may also buy UNI</p>
+          </div>
+          <div className="space-y-1 text-[10px]">
+            <div className="flex justify-between font-mono"><span className="text-gray-400">API endpoint</span><span>trade-api.gateway.uniswap.org/v1</span></div>
+            <div className="flex justify-between font-mono"><span className="text-gray-400">routing</span><span>BEST_PRICE</span></div>
+            <div className="flex justify-between font-mono"><span className="text-gray-400">tokens</span><span>ETH, USDC, WETH, UNI</span></div>
+            <div className="flex justify-between font-mono"><span className="text-gray-400">network</span><span>Sepolia (11155111)</span></div>
+          </div>
+          <a href="https://sepolia.etherscan.io/address/0x44ACAb497e28c6F700528FE7C281A4A1e557d155" target="_blank" rel="noopener noreferrer"
+            className="text-blue-600 hover:underline text-[10px] block">Trader wallet on Etherscan →</a>
+        </>
+      )}
+
       </div>
     </div>
   );
